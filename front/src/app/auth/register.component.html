@@ -1,0 +1,72 @@
+<section class="auth-card">
+  <header>
+    <h1>Create your account</h1>
+    <p>Fill in the details below to start.</p>
+  </header>
+
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <div class="two-column">
+      <label>
+        First name
+        <input type="text" formControlName="firstName" placeholder="Milan" />
+      </label>
+      <div class="field-error" *ngIf="form.get('firstName')?.invalid && form.get('firstName')?.touched">
+        First name is required.
+      </div>
+      <label>
+        Last name
+        <input type="text" formControlName="lastName" placeholder="Kecman" />
+      </label>
+      <div class="field-error" *ngIf="form.get('lastName')?.invalid && form.get('lastName')?.touched">
+        Last name is required.
+      </div>
+    </div>
+
+    <label>
+      Email
+      <input type="email" formControlName="email" placeholder="name@example.com" />
+    </label>
+    <div class="field-error" *ngIf="form.get('email')?.invalid && form.get('email')?.touched">
+      Enter a valid email.
+    </div>
+
+    <label>
+      Username
+      <input type="text" formControlName="username" placeholder="your.handle" />
+    </label>
+    <div class="field-error" *ngIf="form.get('username')?.invalid && form.get('username')?.touched">
+      Username must be at least 3 characters.
+    </div>
+
+    <label>
+      Address
+      <input type="text" formControlName="address" placeholder="Street and number" />
+    </label>
+    <div class="field-error" *ngIf="form.get('address')?.invalid && form.get('address')?.touched">
+      Address is required.
+    </div>
+
+    <div class="two-column">
+      <label>
+        Password
+        <input type="password" formControlName="password" placeholder="Minimum 8 characters" />
+      </label>
+      <div class="field-error" *ngIf="form.get('password')?.invalid && form.get('password')?.touched">
+        Password must be at least 8 characters.
+      </div>
+      <label>
+        Confirm password
+        <input type="password" formControlName="confirmPassword" placeholder="Repeat password" />
+      </label>
+      <div class="field-error" *ngIf="form.get('confirmPassword')?.invalid && form.get('confirmPassword')?.touched">
+        Confirm password is required.
+      </div>
+    </div>
+    <div class="field-error" *ngIf="fieldErrors['confirmPassword']">{{ fieldErrors['confirmPassword'] }}</div>
+
+    <button type="submit">Create account</button>
+  </form>
+
+  <div class="message success" *ngIf="successMessage">{{ successMessage }}</div>
+  <div class="message error" *ngIf="errorMessage">{{ errorMessage }}</div>
+</section>

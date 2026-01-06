@@ -1,0 +1,18 @@
+<div class="app-shell">
+  <nav class="top-nav">
+    <div class="brand">MiniTube</div>
+    <div class="links">
+      <ng-container *ngIf="authService.isAuthenticated(); else guestLinks">
+        <button class="logout" type="button" (click)="logout()">Log out</button>
+      </ng-container>
+      <ng-template #guestLinks>
+        <a routerLink="/login" routerLinkActive="active">Login</a>
+        <a routerLink="/register" routerLinkActive="active">Register</a>
+      </ng-template>
+    </div>
+  </nav>
+
+  <main class="content">
+    <router-outlet></router-outlet>
+  </main>
+</div>

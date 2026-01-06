@@ -1,0 +1,16 @@
+.home-card {
+  background: rgba(255, 255, 255, 0.92);
+  padding: 48px;
+  border-radius: 20px;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.2);
+  text-align: center;
+}
+
+.home-card h1 {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.home-card p {
+  color: #475569;
+}

@@ -1,0 +1,58 @@
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(circle at top left, #fdf2ff 0%, #e0f2fe 40%, #f8fafc 100%);
+  color: #0f172a;
+}
+
+.top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 8vw;
+}
+
+.brand {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.links {
+  display: flex;
+  gap: 16px;
+}
+
+.links a {
+  text-decoration: none;
+  color: #1e293b;
+  font-weight: 600;
+  padding-bottom: 4px;
+  border-bottom: 2px solid transparent;
+}
+
+.links a.active {
+  border-color: #7c3aed;
+}
+
+.links .logout {
+  border: none;
+  background: #ef4444;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.links .logout:hover {
+  background: #dc2626;
+}
+
+.content {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
