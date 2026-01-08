@@ -10,6 +10,7 @@ import { HomeComponent } from './home/home.component';
 import { VideoUploadComponent } from './video/video-upload/video-upload.component';
 import { VideoListComponent } from './video/video-list/video-list.component';
 import { VideoDetailComponent } from './video/video-detail/video-detail.component';
+import { UserProfileComponent } from './profile/user-profile.component';
 
 @NgModule({
   declarations: [
@@ -19,7 +20,8 @@ import { VideoDetailComponent } from './video/video-detail/video-detail.componen
     HomeComponent,
     VideoUploadComponent,
     VideoListComponent,
-    VideoDetailComponent
+    VideoDetailComponent,
+    UserProfileComponent
   ],
   imports: [
     BrowserModule,

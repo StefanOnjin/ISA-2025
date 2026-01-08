@@ -8,6 +8,7 @@ import Jutjubic.RA56.repository.UserRepository;
 import Jutjubic.RA56.repository.VideoRepository;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -31,7 +32,7 @@ public class VideoService {
     }
 
     public List<VideoResponse> getAllVideos() {
-        return videoRepository.findAll().stream()
+        return videoRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt")).stream()
                 .map(video -> {
                     String thumbnailUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
                             .path("/api/videos/thumbnail/")

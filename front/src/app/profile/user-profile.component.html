@@ -1,0 +1,14 @@
+<section class="profile-card" *ngIf="profile; else loadingOrError">
+  <header>
+    <p class="label">User profile</p>
+    <h1>{{ profile.firstName }} {{ profile.lastName }}</h1>
+    <p class="username">@{{ profile.username }}</p>
+  </header>
+</section>
+
+<ng-template #loadingOrError>
+  <section class="profile-card">
+    <p *ngIf="!errorMessage">Loading profile...</p>
+    <p *ngIf="errorMessage" class="error-message">{{ errorMessage }}</p>
+  </section>
+</ng-template>

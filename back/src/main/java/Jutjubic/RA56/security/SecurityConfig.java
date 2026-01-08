@@ -44,6 +44,7 @@ public class SecurityConfig {
 			.cors(cors -> cors.configurationSource(corsConfigurationSource()))
 			.authorizeHttpRequests(auth -> auth
 					.requestMatchers(HttpMethod.GET, "/api/videos/**").permitAll()
+					.requestMatchers(HttpMethod.GET, "/api/users/**").permitAll()
 					.requestMatchers("/auth/**", "/h2-console/**", "/error").permitAll()
 					.anyRequest().authenticated());
 

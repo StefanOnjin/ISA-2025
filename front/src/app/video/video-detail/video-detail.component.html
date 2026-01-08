@@ -7,17 +7,37 @@
       </video>
     </div>
     <div class="video-details">
-      <h1 class="title">{{ video.title }}</h1>
-      <p class="author">Uploaded by: {{ video.ownerUsername }} on {{ video.createdAt | date: 'medium' }}</p>
+      <div class="title-row">
+        <h1 class="title">{{ video.title }}</h1>
+        <div class="action-row">
+          <button type="button" class="action-button like-button" (click)="handleGuestAction()">👍 Like</button>
+        </div>
+      </div>
+      <p class="author">
+        Uploaded by:
+        <a [routerLink]="['/users', video.ownerUsername]">{{ video.ownerUsername }}</a>
+        on {{ video.createdAt | date: 'medium' }}
+      </p>
       <hr>
       <p class="description">{{ video.description }}</p>
       <div class="tags" *ngIf="video.tags">
         <strong>Tags:</strong> {{ video.tags }}
       </div>
+      <section class="interaction-card">
+        <p class="hint" *ngIf="!authService.isAuthenticated()">
+          Prijavite se da biste mogli da lajkujete ili komentarisete.
+        </p>
+        <div class="comment-box">
+          <textarea rows="4" placeholder="Write a comment..." [disabled]="!authService.isAuthenticated()"></textarea>
+          <button type="button" (click)="handleGuestAction()">Post comment</button>
+        </div>
+        <p *ngIf="guestNotice" class="error-message">{{ guestNotice }}</p>
+      </section>
     </div>
   </div>
   <div class="sidebar">
-    <!-- Ovde treba da se implementiraju jos komentari -->
+    <section class="chat-card">
+    </section>
   </div>
 </div>
 

@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
 import { VideoService } from '../../services/video.service';
 
 @Component({
@@ -11,9 +12,11 @@ export class VideoDetailComponent implements OnInit {
 
   video: any;
   errorMessage: string | null = null;
+  guestNotice: string | null = null;
 
   constructor(
     private route: ActivatedRoute,
+    public authService: AuthService,
     private videoService: VideoService
   ) { }
 
@@ -30,5 +33,14 @@ export class VideoDetailComponent implements OnInit {
         }
       });
     }
+  }
+
+  handleGuestAction(): void {
+    if (!this.authService.isAuthenticated()) {
+      this.guestNotice = 'Prijavite se da biste mogli da lajkujete ili komentarisete.';
+      return;
+    }
+
+    this.guestNotice = null;
   }
 }

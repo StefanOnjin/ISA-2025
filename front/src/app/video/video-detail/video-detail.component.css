@@ -4,17 +4,21 @@
   max-width: 1200px; 
   margin: 20px auto;
   padding: 20px;
+  align-items: flex-start;
 }
 
 .main-content {
-  width: 100%;
+  flex: 0 0 75%;
+  max-width: 75%;
 }
 
 .sidebar {
-  width: 25%;
-  background-color: #f8f9fa;
-  padding: 20px;
+  flex: 0 0 25%;
+  max-width: 25%;
+  background-color: #ffffff;
+  padding: 0;
   border-radius: 8px;
+  align-self: flex-start;
 }
 
 .video-player-container {
@@ -42,13 +46,46 @@
 .title {
   font-size: 1.8em;
   font-weight: 600;
-  margin: 0 0 10px 0;
+  margin: 0;
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.action-row {
+  display: flex;
+  gap: 10px;
+}
+
+.action-button {
+  border: none;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #0f172a;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .author {
   font-size: 1em;
   color: #555;
   margin-bottom: 20px;
+}
+
+.author a {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.author a:hover {
+  text-decoration: underline;
 }
 
 hr {
@@ -73,4 +110,58 @@ hr {
   color: #dc2626;
   text-align: center;
   width: 100%;
+}
+
+.interaction-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.hint {
+  color: #6b7280;
+  font-size: 0.95em;
+}
+
+.like-button {
+  background: #f97316;
+  color: #fff;
+}
+
+.comment-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.comment-box textarea {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  resize: vertical;
+}
+
+.comment-box button {
+  align-self: flex-start;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #0ea5e9;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chat-card h2 {
+  margin: 0 0 8px 0;
+  font-size: 1.1em;
+}
+
+.chat-card {
+  width: 100%;
+  aspect-ratio: 16 / 27;
 }
