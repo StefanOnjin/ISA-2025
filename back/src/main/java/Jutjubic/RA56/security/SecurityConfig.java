@@ -5,8 +5,10 @@ import Jutjubic.RA56.security.auth.TokenAuthenticationFilter;
 import Jutjubic.RA56.util.TokenUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -19,6 +21,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 	private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
 	private final TokenUtils tokenUtils;
@@ -40,10 +43,12 @@ public class SecurityConfig {
 			.exceptionHandling(exception -> exception.authenticationEntryPoint(restAuthenticationEntryPoint))
 			.cors(cors -> cors.configurationSource(corsConfigurationSource()))
 			.authorizeHttpRequests(auth -> auth
+					.requestMatchers(HttpMethod.GET, "/api/videos/**").permitAll()
 					.requestMatchers("/auth/**", "/h2-console/**", "/error").permitAll()
-					.anyRequest().authenticated())
-			.formLogin(form -> form.disable())
-			.httpBasic(basic -> basic.disable());
+					.anyRequest().authenticated());
+
+		http.formLogin(form -> form.disable());
+		http.httpBasic(basic -> basic.disable());
 
 		http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
 		http.addFilterBefore(new TokenAuthenticationFilter(tokenUtils, userDetailsService), BasicAuthenticationFilter.class);

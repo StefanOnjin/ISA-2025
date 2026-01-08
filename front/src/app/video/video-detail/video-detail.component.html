@@ -1,0 +1,29 @@
+<div class="page-container" *ngIf="video; else loadingOrError">
+  <div class="main-content">
+    <div class="video-player-container">
+      <video controls autoplay class="video-player">
+        <source [src]="video.videoUrl" type="video/mp4">
+        Your browser does not support the video tag.
+      </video>
+    </div>
+    <div class="video-details">
+      <h1 class="title">{{ video.title }}</h1>
+      <p class="author">Uploaded by: {{ video.ownerUsername }} on {{ video.createdAt | date: 'medium' }}</p>
+      <hr>
+      <p class="description">{{ video.description }}</p>
+      <div class="tags" *ngIf="video.tags">
+        <strong>Tags:</strong> {{ video.tags }}
+      </div>
+    </div>
+  </div>
+  <div class="sidebar">
+    <!-- Ovde treba da se implementiraju jos komentari -->
+  </div>
+</div>
+
+<ng-template #loadingOrError>
+  <div class="page-container">
+    <p *ngIf="!errorMessage">Loading video...</p>
+    <p *ngIf="errorMessage" class="error-message">{{ errorMessage }}</p>
+  </div>
+</ng-template>

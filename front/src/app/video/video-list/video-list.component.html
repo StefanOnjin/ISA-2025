@@ -1,0 +1,26 @@
+<div class="container" *ngIf="videos.length > 0; else noVideos">
+  <div class="video-grid">
+    <a *ngFor="let video of videos" [routerLink]="['/videos', video.id]" class="video-card-link">
+      <div class="video-card">
+        <div class="thumbnail-container">
+          <img [src]="video.thumbnailUrl" alt="Thumbnail for {{ video.title }}" class="thumbnail">
+          <div class="play-overlay">
+            <span class="play-icon">▶</span>
+          </div>
+        </div>
+        <div class="video-info">
+          <h3 class="title">{{ video.title }}</h3>
+          <p class="author">by {{ video.ownerUsername }}</p>
+          <p class="description">{{ video.description }}</p>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<ng-template #noVideos>
+  <div class="container">
+    <p *ngIf="!errorMessage">No videos found. Be the first to upload one!</p>
+    <p *ngIf="errorMessage" class="error-message">{{ errorMessage }}</p>
+  </div>
+</ng-template>

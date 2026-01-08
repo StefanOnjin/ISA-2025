@@ -3,6 +3,7 @@
     <div class="brand">MiniTube</div>
     <div class="links">
       <ng-container *ngIf="authService.isAuthenticated(); else guestLinks">
+        <a routerLink="/upload" class="nav-link">Upload Video</a>
         <button class="logout" type="button" (click)="logout()">Log out</button>
       </ng-container>
       <ng-template #guestLinks>
