@@ -1,24 +1,29 @@
 .page-container {
   display: flex;
   gap: 24px;
-  max-width: 1200px; 
-  margin: 20px auto;
-  padding: 20px;
+  max-width: 1100px;
+  margin: 4px auto;
+  padding: 8px 16px 20px;
   align-items: flex-start;
 }
 
 .main-content {
-  flex: 0 0 75%;
-  max-width: 75%;
+  flex: 1 1 100%;
+  max-width: 100%;
 }
 
-.sidebar {
-  flex: 0 0 25%;
-  max-width: 25%;
-  background-color: #ffffff;
-  padding: 0;
-  border-radius: 8px;
-  align-self: flex-start;
+.video-top-row {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.video-left {
+  flex: 0 0 68%;
+}
+
+.video-info {
+  flex: 0 0 32%;
 }
 
 .video-player-container {
@@ -39,10 +44,6 @@
   height: 100%;
 }
 
-.video-details {
-  padding: 20px 0;
-}
-
 .title {
   font-size: 1.8em;
   font-weight: 600;
@@ -54,7 +55,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .action-row {
@@ -156,12 +157,64 @@ hr {
   cursor: pointer;
 }
 
-.chat-card h2 {
-  margin: 0 0 8px 0;
-  font-size: 1.1em;
+.comment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.chat-card {
-  width: 100%;
-  aspect-ratio: 16 / 27;
+.comment-item {
+  padding: 12px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.9em;
+  color: #6b7280;
+}
+
+.comment-author {
+  font-weight: 600;
+  color: #0f172a;
+  text-decoration: none;
+}
+
+.comment-author:hover {
+  text-decoration: underline;
+}
+
+.comment-text {
+  margin: 6px 0 0 0;
+}
+
+.comment-pagination {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 0.9em;
+}
+
+.comment-pagination button {
+  border: 1px solid #cbd5f5;
+  background: #f8fafc;
+  color: #0f172a;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .video-top-row {
+    flex-direction: column;
+  }
+
+  .video-left,
+  .video-info {
+    flex: 1 1 auto;
+  }
 }

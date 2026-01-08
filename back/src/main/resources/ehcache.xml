@@ -25,4 +25,12 @@
         </resources>
     </cache>
 
+    <cache alias="comments" uses-template="default-cache-template">
+        <key-type>java.lang.String</key-type>
+        <value-type>java.lang.Object</value-type>
+        <resources>
+            <heap>200</heap>
+        </resources>
+    </cache>
+
 </config>

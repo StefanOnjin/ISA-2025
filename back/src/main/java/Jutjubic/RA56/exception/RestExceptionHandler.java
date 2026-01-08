@@ -34,6 +34,12 @@ public class RestExceptionHandler {
 				.body(new ErrorResponse(ex.getMessage(), null));
 	}
 
+	@ExceptionHandler(CommentRateLimitException.class)
+	public ResponseEntity<ErrorResponse> handleCommentRateLimit(CommentRateLimitException ex) {
+		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+				.body(new ErrorResponse(ex.getMessage(), null));
+	}
+
 	@ExceptionHandler(ActivationTokenException.class)
 	public ResponseEntity<ErrorResponse> handleActivation(ActivationTokenException ex) {
 		return ResponseEntity.badRequest().body(new ErrorResponse(ex.getMessage(), null));
