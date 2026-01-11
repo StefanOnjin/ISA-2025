@@ -4,7 +4,7 @@ import time
 import urllib.error
 import urllib.request
 
-# Config
+
 BASE_URL = "http://localhost:8080"
 VIDEO_ID = 1
 USERS = [
@@ -28,7 +28,7 @@ def http_json(method, url, payload=None, headers=None):
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8")
         return e.code, body
-    except Exception as e:  # network/timeout
+    except Exception as e:  
         return None, str(e)
 
 
@@ -109,7 +109,6 @@ def main():
         tokens.append(token)
         print(f"[LOGIN OK] {user['email']}")
 
-    # Total before like
     likes_before, status, body = get_likes_count(tokens[0])
     print(f"Total likes BEFORE like phase: {likes_before} (status={status})")
 
