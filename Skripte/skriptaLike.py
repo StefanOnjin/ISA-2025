@@ -1,9 +1,6 @@
-import json
+import requests
 import threading
 import time
-import urllib.error
-import urllib.request
-
 
 BASE_URL = "http://localhost:8080"
 VIDEO_ID = 1
@@ -14,127 +11,79 @@ USERS = [
 WAIT_BEFORE_UNLIKE_SECONDS = 30
 
 
-def http_json(method, url, payload=None, headers=None):
-    data = json.dumps(payload).encode("utf-8") if payload is not None else None
-    req = urllib.request.Request(url, data=data, method=method)
-    req.add_header("Content-Type", "application/json")
-    if headers:
-        for k, v in headers.items():
-            req.add_header(k, v)
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            body = resp.read().decode("utf-8")
-            return resp.status, body
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8")
-        return e.code, body
-    except Exception as e:  
-        return None, str(e)
+def like_video(token):
+    headers = {"Authorization": f"Bearer {token}"}
+    requests.post(f"{BASE_URL}/api/videos/{VIDEO_ID}/like", headers=headers, timeout=10)
 
 
-def login(email, password):
-    status, body = http_json(
-        "POST",
-        f"{BASE_URL}/auth/login",
-        {"email": email, "password": password},
-    )
-    if status != 200:
-        return None, status, body
-    try:
-        data = json.loads(body)
-    except json.JSONDecodeError:
-        return None, status, body
-    return data.get("accessToken"), status, body
+def unlike_video(token):
+    headers = {"Authorization": f"Bearer {token}"}
+    requests.delete(f"{BASE_URL}/api/videos/{VIDEO_ID}/like", headers=headers, timeout=10)
 
 
-def like_or_unlike(method, token, results, idx, barrier, action_label):
-    barrier.wait()
-    start = time.perf_counter()
-    status, body = http_json(
-        method,
-        f"{BASE_URL}/api/videos/{VIDEO_ID}/like",
-        None,
-        {"Authorization": f"Bearer {token}"},
-    )
-    elapsed_ms = (time.perf_counter() - start) * 1000.0
-    likes_count = None
-    try:
-        data = json.loads(body)
-        likes_count = data.get("likesCount")
-    except Exception:
-        pass
-    results[idx] = (action_label, status, elapsed_ms, likes_count, body)
-
-
-def run_phase(method, tokens, action_label):
-    barrier = threading.Barrier(len(tokens))
-    results = [None] * len(tokens)
-    threads = []
-    for i, token in enumerate(tokens):
-        t = threading.Thread(
-            target=like_or_unlike,
-            args=(method, token, results, i, barrier, action_label),
+def login_all():
+    tokens = []
+    for user in USERS:
+        resp = requests.post(
+            f"{BASE_URL}/auth/login",
+            json={"email": user["email"], "password": user["password"]},
+            timeout=10,
         )
+        if resp.status_code != 200:
+            print(f"Login failed for {user['email']}: {resp.status_code} {resp.text}")
+            return None
+        tokens.append(resp.json().get("accessToken"))
+    return tokens
+
+
+def get_likes(token):
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    resp = requests.get(f"{BASE_URL}/api/videos/{VIDEO_ID}", headers=headers, timeout=10)
+    return resp.json().get("likesCount", 0)
+
+
+def run_concurrent(fn, tokens):
+    threads = []
+    for token in tokens:
+        t = threading.Thread(target=fn, args=(token,))
         t.start()
         threads.append(t)
     for t in threads:
         t.join()
-    return results
-
-
-def get_likes_count(token):
-    status, body = http_json(
-        "GET",
-        f"{BASE_URL}/api/videos/{VIDEO_ID}",
-        None,
-        {"Authorization": f"Bearer {token}"},
-    )
-    if status != 200:
-        return None, status, body
-    try:
-        data = json.loads(body)
-        return data.get("likesCount"), status, body
-    except Exception:
-        return None, status, body
-
-
-def main():
-    print("Logging in users...")
-    tokens = []
-    for user in USERS:
-        token, status, body = login(user["email"], user["password"])
-        if not token:
-            print(f"[LOGIN FAIL] {user['email']}: status={status}, body={body}")
-            return
-        tokens.append(token)
-        print(f"[LOGIN OK] {user['email']}")
-
-    likes_before, status, body = get_likes_count(tokens[0])
-    print(f"Total likes BEFORE like phase: {likes_before} (status={status})")
-
-    print("=== LIKE phase (concurrent) ===")
-    like_results = run_phase("POST", tokens, "LIKE")
-    for i, (label, status, ms, likes, body) in enumerate(like_results):
-        print(
-            f"User{i+1}-{label}: status={status}, time={ms:.2f}ms, likesCount={likes}, body={body}"
-        )
-
-    likes_after_like, status, body = get_likes_count(tokens[0])
-    print(f"Total likes AFTER like phase: {likes_after_like} (status={status})")
-
-    print(f"Waiting {WAIT_BEFORE_UNLIKE_SECONDS} seconds before UNLIKE...")
-    time.sleep(WAIT_BEFORE_UNLIKE_SECONDS)
-
-    print("=== UNLIKE phase (concurrent) ===")
-    unlike_results = run_phase("DELETE", tokens, "UNLIKE")
-    for i, (label, status, ms, likes, body) in enumerate(unlike_results):
-        print(
-            f"User{i+1}-{label}: status={status}, time={ms:.2f}ms, likesCount={likes}, body={body}"
-        )
-
-    likes_after_unlike, status, body = get_likes_count(tokens[0])
-    print(f"Total likes AFTER unlike phase: {likes_after_unlike} (status={status})")
 
 
 if __name__ == "__main__":
-    main()
+ 
+    try:
+        requests.get(BASE_URL, timeout=5)
+    except Exception as e:
+        print(f"API not reachable: {e}")
+        exit(1)
+
+    tokens = login_all()
+    if not tokens:
+        exit(1)
+
+    start_likes = get_likes(tokens[0])
+    print(f"Pocetni broj lajkova: {start_likes}")
+
+    run_concurrent(like_video, tokens)
+    time.sleep(1)
+    after_like = get_likes(tokens[0])
+    expected_after_like = start_likes + len(tokens)
+    print(f"Konacni broj lajkova posle LIKE: {after_like}")
+    print(f"Ocekivani broj lajkova posle LIKE: {expected_after_like}")
+
+    print(f"Cekam {WAIT_BEFORE_UNLIKE_SECONDS} sekundi pre UNLIKE...")
+    time.sleep(WAIT_BEFORE_UNLIKE_SECONDS)
+
+    run_concurrent(unlike_video, tokens)
+    time.sleep(1)
+    after_unlike = get_likes(tokens[0])
+    print(f"Konacni broj lajkova posle UNLIKE: {after_unlike}")
+    print(f"Ocekivani broj lajkova posle UNLIKE: {start_likes}")
+
+    if after_like == expected_after_like and after_unlike == start_likes:
+        print("REZULTAT: Test je prosao")
+    else:
+        print("REZULTAT: Test nije prosao")
