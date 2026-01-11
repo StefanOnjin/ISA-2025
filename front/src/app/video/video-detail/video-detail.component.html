@@ -13,7 +13,28 @@
         <div class="title-row">
           <h1 class="title">{{ video.title }}</h1>
           <div class="action-row">
-            <button type="button" class="action-button like-button" (click)="handleGuestAction()">👍 Like</button>
+            <span class="like-count">{{ likesCount }} likes</span>
+            <button
+              type="button"
+              class="action-button like-button"
+              *ngIf="authService.isAuthenticated() && !likedByUser"
+              (click)="likeVideo()">
+              Like
+            </button>
+            <button
+              type="button"
+              class="action-button like-button"
+              *ngIf="authService.isAuthenticated() && likedByUser"
+              (click)="unlikeVideo()">
+              Unlike
+            </button>
+            <button
+              type="button"
+              class="action-button like-button"
+              *ngIf="!authService.isAuthenticated()"
+              (click)="handleGuestAction()">
+              Like
+            </button>
           </div>
         </div>
         <p class="author">
@@ -41,6 +62,7 @@
         <button type="button" (click)="submitComment()">Post comment</button>
       </div>
       <p *ngIf="guestNotice" class="error-message">{{ guestNotice }}</p>
+      <p *ngIf="likeError" class="error-message">{{ likeError }}</p>
       <p *ngIf="commentsError" class="error-message">{{ commentsError }}</p>
       <div class="comment-list" *ngIf="comments.length > 0">
         <div class="comment-item" *ngFor="let comment of comments">

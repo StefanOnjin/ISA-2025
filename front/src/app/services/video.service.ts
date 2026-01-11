@@ -19,6 +19,22 @@ export class VideoService {
     return this.http.get<any>(`${this.baseUrl}/${id}`);
   }
 
+  likeVideo(id: number): Observable<any> {
+    const token = localStorage.getItem(this.tokenKey);
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${token}`
+    });
+    return this.http.post(`${this.baseUrl}/${id}/like`, {}, { headers: headers });
+  }
+
+  unlikeVideo(id: number): Observable<any> {
+    const token = localStorage.getItem(this.tokenKey);
+    const headers = new HttpHeaders({
+      'Authorization': `Bearer ${token}`
+    });
+    return this.http.delete(`${this.baseUrl}/${id}/like`, { headers: headers });
+  }
+
   upload(formData: FormData): Observable<any> {
     const token = localStorage.getItem(this.tokenKey);
     

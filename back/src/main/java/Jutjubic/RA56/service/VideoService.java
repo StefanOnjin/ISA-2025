@@ -4,6 +4,7 @@ import Jutjubic.RA56.domain.User;
 import Jutjubic.RA56.domain.Video;
 import Jutjubic.RA56.dto.VideoDetailResponse;
 import Jutjubic.RA56.dto.VideoResponse;
+import Jutjubic.RA56.repository.VideoLikeRepository;
 import Jutjubic.RA56.repository.UserRepository;
 import Jutjubic.RA56.repository.VideoRepository;
 import org.springframework.cache.annotation.Cacheable;
@@ -24,11 +25,16 @@ public class VideoService {
     private final VideoRepository videoRepository;
     private final FileStorageService fileStorageService;
     private final UserRepository userRepository;
+    private final VideoLikeRepository likeRepository;
 
-    public VideoService(VideoRepository videoRepository, FileStorageService fileStorageService, UserRepository userRepository) {
+    public VideoService(VideoRepository videoRepository,
+            FileStorageService fileStorageService,
+            UserRepository userRepository,
+            VideoLikeRepository likeRepository) {
         this.videoRepository = videoRepository;
         this.fileStorageService = fileStorageService;
         this.userRepository = userRepository;
+        this.likeRepository = likeRepository;
     }
 
     public List<VideoResponse> getAllVideos() {
@@ -38,6 +44,7 @@ public class VideoService {
                             .path("/api/videos/thumbnail/")
                             .path(video.getThumbnailPath())
                             .toUriString();
+                    long likesCount = likeRepository.countByVideoId(video.getId());
                     return new VideoResponse(
                             video.getId(),
                             video.getTitle(),
@@ -46,13 +53,14 @@ public class VideoService {
                             video.getCreatedAt(),
                             video.getLocation(),
                             video.getOwner().getUsername(),
-                            thumbnailUrl
+                            thumbnailUrl,
+                            likesCount
                     );
                 })
                 .collect(Collectors.toList());
     }
 
-    public VideoDetailResponse getVideoById(Long id) {
+    public VideoDetailResponse getVideoById(Long id, String userEmail) {
         Video video = videoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Video not found with id: " + id));
         
@@ -66,6 +74,16 @@ public class VideoService {
                 .path(video.getVideoPath())
                 .toUriString();
 
+        long likesCount = likeRepository.countByVideoId(video.getId());
+        boolean likedByUser = false;
+
+        if (userEmail != null && !userEmail.isBlank()) {
+            User user = userRepository.findByEmailIgnoreCase(userEmail).orElse(null);
+            if (user != null) {
+                likedByUser = likeRepository.existsByVideoIdAndUserId(video.getId(), user.getId());
+            }
+        }
+
         return new VideoDetailResponse(
                 video.getId(),
                 video.getTitle(),
@@ -75,7 +93,9 @@ public class VideoService {
                 video.getLocation(),
                 video.getOwner().getUsername(),
                 thumbnailUrl,
-                videoUrl
+                videoUrl,
+                likesCount,
+                likedByUser
         );
     }
 
@@ -117,7 +137,8 @@ public class VideoService {
                 savedVideo.getCreatedAt(),
                 savedVideo.getLocation(),
                 savedVideo.getOwner().getUsername(),
-                thumbnailUrl
+                thumbnailUrl,
+                0L
             );
 
         } catch (Exception e) {

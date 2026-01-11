@@ -1,6 +1,8 @@
 package Jutjubic.RA56.controller;
 
 import Jutjubic.RA56.dto.VideoResponse;
+import Jutjubic.RA56.dto.LikeResponse;
+import Jutjubic.RA56.service.LikeService;
 import Jutjubic.RA56.service.VideoService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -24,9 +26,11 @@ import Jutjubic.RA56.dto.VideoDetailResponse;
 public class VideoController {
 
     private final VideoService videoService;
+    private final LikeService likeService;
 
-    public VideoController(VideoService videoService) {
+    public VideoController(VideoService videoService, LikeService likeService) {
         this.videoService = videoService;
+        this.likeService = likeService;
     }
 
     @GetMapping
@@ -36,8 +40,9 @@ public class VideoController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<VideoDetailResponse> getVideoById(@PathVariable Long id) {
-        VideoDetailResponse video = videoService.getVideoById(id);
+    public ResponseEntity<VideoDetailResponse> getVideoById(@PathVariable Long id, Principal principal) {
+        String userEmail = principal != null ? principal.getName() : null;
+        VideoDetailResponse video = videoService.getVideoById(id, userEmail);
         return ResponseEntity.ok(video);
     }
 
@@ -66,6 +71,20 @@ public class VideoController {
 
         VideoResponse videoResponse = videoService.createVideo(title, description, tags, location, thumbnail, video, principal.getName());
         return ResponseEntity.ok(videoResponse);
+    }
+
+    @PostMapping("/{id}/like")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<LikeResponse> likeVideo(@PathVariable Long id, Principal principal) {
+        LikeResponse response = likeService.likeVideo(id, principal.getName());
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{id}/like")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<LikeResponse> unlikeVideo(@PathVariable Long id, Principal principal) {
+        LikeResponse response = likeService.unlikeVideo(id, principal.getName());
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/thumbnail/{fileName:.+}")

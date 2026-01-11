@@ -22,6 +22,9 @@ export class VideoDetailComponent implements OnInit {
   commentText = '';
   commentPage: CommentPage | null = null;
   readonly commentPageSize = 10;
+  likesCount = 0;
+  likedByUser = false;
+  likeError: string | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -37,6 +40,8 @@ export class VideoDetailComponent implements OnInit {
       this.videoService.getVideoById(+id).subscribe({
         next: (data) => {
           this.video = data;
+          this.likesCount = data.likesCount ?? 0;
+          this.likedByUser = !!data.likedByUser;
         },
         error: (error) => {
           this.errorMessage = `Failed to load video: ${error.message}`;
@@ -70,6 +75,44 @@ export class VideoDetailComponent implements OnInit {
     }
 
     this.guestNotice = null;
+  }
+
+  likeVideo(): void {
+    if (!this.authService.isAuthenticated() || this.videoId === null) {
+      this.handleGuestAction();
+      return;
+    }
+
+    this.likeError = null;
+    this.videoService.likeVideo(this.videoId).subscribe({
+      next: (response) => {
+        this.likesCount = response.likesCount ?? this.likesCount;
+        this.likedByUser = true;
+      },
+      error: (error) => {
+        this.likeError = error?.error?.message ?? 'Failed to like video.';
+        console.error(error);
+      }
+    });
+  }
+
+  unlikeVideo(): void {
+    if (!this.authService.isAuthenticated() || this.videoId === null) {
+      this.handleGuestAction();
+      return;
+    }
+
+    this.likeError = null;
+    this.videoService.unlikeVideo(this.videoId).subscribe({
+      next: (response) => {
+        this.likesCount = response.likesCount ?? this.likesCount;
+        this.likedByUser = false;
+      },
+      error: (error) => {
+        this.likeError = error?.error?.message ?? 'Failed to unlike video.';
+        console.error(error);
+      }
+    });
   }
 
   submitComment(): void {

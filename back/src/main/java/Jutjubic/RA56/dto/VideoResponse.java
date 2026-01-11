@@ -10,6 +10,7 @@ public record VideoResponse(
         LocalDateTime createdAt,
         String location,
         String ownerUsername,
-        String thumbnailUrl
+        String thumbnailUrl,
+        long likesCount
 ) {
 }
