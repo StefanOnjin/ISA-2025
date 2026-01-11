@@ -20,6 +20,9 @@ public class Video {
     @Column
     private String tags;
 
+    @Column(nullable = true)
+    private Long views = 0L;
+
     @Column(nullable = false)
     private String thumbnailPath;
 
@@ -48,6 +51,14 @@ public class Video {
         this.createdAt = createdAt;
         this.location = location;
         this.owner = owner;
+    }
+
+    public Long getViews() {
+        return views;
+    }
+
+    public void setViews(Long views) {
+        this.views = views;
     }
 
     public Long getId() {

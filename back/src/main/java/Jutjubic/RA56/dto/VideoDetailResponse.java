@@ -7,6 +7,7 @@ public record VideoDetailResponse(
         String title,
         String description,
         String tags,
+        Long views,
         LocalDateTime createdAt,
         String location,
         String ownerUsername,

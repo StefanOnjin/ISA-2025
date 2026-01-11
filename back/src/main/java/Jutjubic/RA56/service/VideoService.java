@@ -60,10 +60,17 @@ public class VideoService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public VideoDetailResponse getVideoById(Long id, String userEmail) {
-        Video video = videoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Video not found with id: " + id));
-        
+        Video video = videoRepository.findOneByIdForUpdate(id);
+        if (video == null) {
+            throw new RuntimeException("Video not found with id: " + id);
+        }
+
+        long currentViews = video.getViews() == null ? 0L : video.getViews();
+        video.setViews(currentViews + 1);
+        videoRepository.save(video);
+
         String thumbnailUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
                 .path("/api/videos/thumbnail/")
                 .path(video.getThumbnailPath())
@@ -89,6 +96,7 @@ public class VideoService {
                 video.getTitle(),
                 video.getDescription(),
                 video.getTags(),
+                video.getViews(),
                 video.getCreatedAt(),
                 video.getLocation(),
                 video.getOwner().getUsername(),
