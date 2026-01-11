@@ -16,7 +16,12 @@ export class VideoService {
   }
 
   getVideoById(id: number): Observable<any> {
-    return this.http.get<any>(`${this.baseUrl}/${id}`);
+    const token = localStorage.getItem(this.tokenKey);
+    const options = token
+      ? { headers: new HttpHeaders({ 'Authorization': `Bearer ${token}` }) }
+      : {};
+
+    return this.http.get<any>(`${this.baseUrl}/${id}`, options);
   }
 
   likeVideo(id: number): Observable<any> {

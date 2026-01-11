@@ -12,31 +12,33 @@
       <div class="video-info">
         <div class="title-row">
           <h1 class="title">{{ video.title }}</h1>
-          <div class="action-row">
-            <span class="view-count">{{ video.views | number }} views</span>
-            <span class="like-count">{{ likesCount }} likes</span>
-            <button
-              type="button"
-              class="action-button like-button"
-              *ngIf="authService.isAuthenticated() && !likedByUser"
-              (click)="likeVideo()">
-              Like
-            </button>
-            <button
-              type="button"
-              class="action-button like-button"
-              *ngIf="authService.isAuthenticated() && likedByUser"
-              (click)="unlikeVideo()">
-              Unlike
-            </button>
-            <button
-              type="button"
-              class="action-button like-button"
-              *ngIf="!authService.isAuthenticated()"
-              (click)="handleGuestAction()">
-              Like
-            </button>
-          </div>
+        </div>
+        <div class="meta-row">
+          <span class="view-count">{{ video.views | number }} views</span>
+        </div>
+        <div class="like-row">
+          <span class="like-count">{{ likesCount }} likes</span>
+          <button
+            type="button"
+            class="action-button like-button"
+            *ngIf="authService.isAuthenticated() && !likedByUser"
+            (click)="likeVideo()">
+            Like
+          </button>
+          <button
+            type="button"
+            class="action-button like-button"
+            *ngIf="authService.isAuthenticated() && likedByUser"
+            (click)="unlikeVideo()">
+            Unlike
+          </button>
+          <button
+            type="button"
+            class="action-button like-button"
+            *ngIf="!authService.isAuthenticated()"
+            (click)="handleGuestAction()">
+            Like
+          </button>
         </div>
         <p class="author">
           Uploaded by:

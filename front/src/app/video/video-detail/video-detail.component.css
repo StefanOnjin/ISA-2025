@@ -52,15 +52,10 @@
 
 .title-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: flex-start;
+  justify-content: flex-start;
   gap: 12px;
-  margin-bottom: 8px;
-}
-
-.action-row {
-  display: flex;
-  gap: 10px;
+  margin-bottom: 6px;
 }
 
 .action-button {
@@ -111,6 +106,25 @@ hr {
   color: #dc2626;
   text-align: center;
   width: 100%;
+}
+
+.like-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  margin: 10px 0;
+}
+
+.like-count {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.meta-row {
+  margin-bottom: 4px;
+  color: #4b5563;
+  font-size: 0.95em;
 }
 
 .interaction-card {

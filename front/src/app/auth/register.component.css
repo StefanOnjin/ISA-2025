@@ -28,6 +28,11 @@ form {
   gap: 14px;
 }
 
+.field-block {
+  display: grid;
+  gap: 6px;
+}
+
 .two-column {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -67,6 +72,11 @@ button {
 
 button:hover {
   background: #0284c7;
+}
+
+.field-error {
+  color: #dc2626;
+  font-size: 12px;
 }
 
 .message {
