@@ -14,8 +14,15 @@
       <input type="text" id="tags" name="tags" [(ngModel)]="tags">
     </div>
     <div class="form-group">
-      <label for="location">Location (optional)</label>
-      <input type="text" id="location" name="location" [(ngModel)]="location">
+      <label>Location (coordinates)</label>
+      <div class="coords-row">
+        <input type="text" [value]="latitude !== null ? latitude : ''" placeholder="Latitude" readonly>
+        <input type="text" [value]="longitude !== null ? longitude : ''" placeholder="Longitude" readonly>
+      </div>
+      <div class="coords-actions">
+        <button type="button" class="map-btn" (click)="openMap()">Select on map</button>
+        <button type="button" class="clear-btn" (click)="clearLocation()" [disabled]="latitude === null || longitude === null">Clear</button>
+      </div>
     </div>
     <div class="form-group">
       <label for="thumbnail">Thumbnail Image</label>
@@ -26,7 +33,7 @@
       <input type="file" id="video" (change)="onVideoSelected($event)" accept="video/mp4" required>
     </div>
     
-    <button type="submit" [disabled]="!uploadForm.form.valid || !selectedThumbnail || !selectedVideo" class="upload-btn">
+    <button type="submit" [disabled]="!uploadForm.form.valid || !selectedThumbnail || !selectedVideo || latitude === null || longitude === null" class="upload-btn">
       Upload Video
     </button>
 
@@ -37,4 +44,24 @@
       {{ successMessage }}
     </div>
   </form>
+</div>
+
+<div class="map-modal" *ngIf="showMap">
+  <div class="map-dialog">
+    <div class="map-header">
+      <h3>Select location</h3>
+      <button type="button" class="close-btn" (click)="closeMap()">×</button>
+    </div>
+    <p class="map-hint">Click on the map to drop a marker and save coordinates.</p>
+    <div id="upload-map" class="map-canvas"></div>
+    <div class="map-footer">
+      <div class="coords-preview" *ngIf="latitude !== null && longitude !== null">
+        {{ latitude }}, {{ longitude }}
+      </div>
+      <div class="map-actions">
+        <button type="button" class="secondary-btn" (click)="closeMap()">Cancel</button>
+        <button type="button" class="primary-btn" (click)="confirmLocation()">Confirm</button>
+      </div>
+    </div>
+  </div>
 </div>

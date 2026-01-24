@@ -64,12 +64,13 @@ public class VideoController {
             @RequestParam("title") String title,
             @RequestParam("description") String description,
             @RequestParam(value = "tags", required = false) String tags,
-            @RequestParam(value = "location", required = false) String location,
+            @RequestParam("latitude") Double latitude,
+            @RequestParam("longitude") Double longitude,
             @RequestParam("thumbnail") MultipartFile thumbnail,
             @RequestParam("video") MultipartFile video,
             Principal principal) {
 
-        VideoResponse videoResponse = videoService.createVideo(title, description, tags, location, thumbnail, video, principal.getName());
+        VideoResponse videoResponse = videoService.createVideo(title, description, tags, latitude, longitude, thumbnail, video, principal.getName());
         return ResponseEntity.ok(videoResponse);
     }
 

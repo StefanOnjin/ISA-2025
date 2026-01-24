@@ -51,7 +51,8 @@ public class VideoService {
                             video.getDescription(),
                             video.getTags(),
                             video.getCreatedAt(),
-                            video.getLocation(),
+                            video.getLatitude(),
+                            video.getLongitude(),
                             video.getOwner().getUsername(),
                             thumbnailUrl,
                             likesCount
@@ -98,7 +99,8 @@ public class VideoService {
                 video.getTags(),
                 video.getViews(),
                 video.getCreatedAt(),
-                video.getLocation(),
+                video.getLatitude(),
+                video.getLongitude(),
                 video.getOwner().getUsername(),
                 thumbnailUrl,
                 videoUrl,
@@ -108,7 +110,11 @@ public class VideoService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public VideoResponse createVideo(String title, String description, String tags, String location, MultipartFile thumbnailFile, MultipartFile videoFile, String username) {
+    public VideoResponse createVideo(String title, String description, String tags, Double latitude, Double longitude, MultipartFile thumbnailFile, MultipartFile videoFile, String username) {
+        if (latitude == null || longitude == null) {
+            throw new RuntimeException("Location coordinates are required.");
+        }
+
         User user = userRepository.findByEmailIgnoreCase(username)
                 .orElseThrow(() -> new RuntimeException("User not found with username: " + username));
 
@@ -126,7 +132,8 @@ public class VideoService {
                     thumbnailFileName,
                     videoFileName,
                     LocalDateTime.now(),
-                    location,
+                    latitude,
+                    longitude,
                     user
             );
 
@@ -143,7 +150,8 @@ public class VideoService {
                 savedVideo.getDescription(),
                 savedVideo.getTags(),
                 savedVideo.getCreatedAt(),
-                savedVideo.getLocation(),
+                savedVideo.getLatitude(),
+                savedVideo.getLongitude(),
                 savedVideo.getOwner().getUsername(),
                 thumbnailUrl,
                 0L

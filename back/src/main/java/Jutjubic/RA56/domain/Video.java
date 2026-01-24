@@ -32,8 +32,11 @@ public class Video {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    @Column
-    private String location;
+    @Column(nullable = false)
+    private Double latitude;
+
+    @Column(nullable = false)
+    private Double longitude;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
@@ -42,14 +45,15 @@ public class Video {
     public Video() {
     }
 
-    public Video(String title, String description, String tags, String thumbnailPath, String videoPath, LocalDateTime createdAt, String location, User owner) {
+    public Video(String title, String description, String tags, String thumbnailPath, String videoPath, LocalDateTime createdAt, Double latitude, Double longitude, User owner) {
         this.title = title;
         this.description = description;
         this.tags = tags;
         this.thumbnailPath = thumbnailPath;
         this.videoPath = videoPath;
         this.createdAt = createdAt;
-        this.location = location;
+        this.latitude = latitude;
+        this.longitude = longitude;
         this.owner = owner;
     }
 
@@ -117,12 +121,20 @@ public class Video {
         this.createdAt = createdAt;
     }
 
-    public String getLocation() {
-        return location;
+    public Double getLatitude() {
+        return latitude;
     }
 
-    public void setLocation(String location) {
-        this.location = location;
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
     }
 
     public User getOwner() {

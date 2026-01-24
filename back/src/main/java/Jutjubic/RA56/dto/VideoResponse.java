@@ -8,7 +8,8 @@ public record VideoResponse(
         String description,
         String tags,
         LocalDateTime createdAt,
-        String location,
+        Double latitude,
+        Double longitude,
         String ownerUsername,
         String thumbnailUrl,
         long likesCount
