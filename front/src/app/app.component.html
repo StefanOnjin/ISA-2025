@@ -4,11 +4,13 @@
     <div class="links">
       <ng-container *ngIf="authService.isAuthenticated(); else guestLinks">
         <a routerLink="/home" class="nav-link">Home</a>
+        <a routerLink="/map" class="nav-link">Map</a>
         <a routerLink="/upload" class="nav-link">Upload Video</a>
         <button class="logout" type="button" (click)="logout()">Log out</button>
       </ng-container>
       <ng-template #guestLinks>
         <a routerLink="/home">Home</a>
+        <a routerLink="/map">Map</a>
         <a routerLink="/login" routerLinkActive="active">Login</a>
         <a routerLink="/register" routerLinkActive="active">Register</a>
       </ng-template>

@@ -39,7 +39,7 @@ public class VideoController {
         return ResponseEntity.ok(videos);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{id:\\d+}")
     public ResponseEntity<VideoDetailResponse> getVideoById(@PathVariable Long id, Principal principal) {
         String userEmail = principal != null ? principal.getName() : null;
         VideoDetailResponse video = videoService.getVideoById(id, userEmail);

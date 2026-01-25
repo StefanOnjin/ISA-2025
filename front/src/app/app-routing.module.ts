@@ -9,12 +9,14 @@ import { UserProfileComponent } from './profile/user-profile.component';
 import { VideoUploadComponent } from './video/video-upload/video-upload.component';
 
 import { VideoDetailComponent } from './video/video-detail/video-detail.component';
+import { VideoMapComponent } from './video/video-map/video-map.component';
 
 const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },
   { path: 'home', component: HomeComponent },
+  { path: 'map', component: VideoMapComponent },
   { path: 'upload', component: VideoUploadComponent, canActivate: [AuthGuard] },
   { path: 'videos/:id', component: VideoDetailComponent },
   { path: 'users/:username', component: UserProfileComponent },

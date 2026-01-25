@@ -11,6 +11,7 @@ import { VideoUploadComponent } from './video/video-upload/video-upload.componen
 import { VideoListComponent } from './video/video-list/video-list.component';
 import { VideoDetailComponent } from './video/video-detail/video-detail.component';
 import { UserProfileComponent } from './profile/user-profile.component';
+import { VideoMapComponent } from './video/video-map/video-map.component';
 
 @NgModule({
   declarations: [
@@ -21,7 +22,8 @@ import { UserProfileComponent } from './profile/user-profile.component';
     VideoUploadComponent,
     VideoListComponent,
     VideoDetailComponent,
-    UserProfileComponent
+    UserProfileComponent,
+    VideoMapComponent
   ],
   imports: [
     BrowserModule,

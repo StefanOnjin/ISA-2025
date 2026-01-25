@@ -3,6 +3,8 @@ package Jutjubic.RA56.service;
 import Jutjubic.RA56.domain.User;
 import Jutjubic.RA56.domain.Video;
 import Jutjubic.RA56.dto.VideoDetailResponse;
+import Jutjubic.RA56.dto.VideoMapPoint;
+import Jutjubic.RA56.dto.VideoMapResponse;
 import Jutjubic.RA56.dto.VideoResponse;
 import Jutjubic.RA56.repository.VideoLikeRepository;
 import Jutjubic.RA56.repository.UserRepository;
@@ -17,6 +19,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -56,6 +59,32 @@ public class VideoService {
                             video.getOwner().getUsername(),
                             thumbnailUrl,
                             likesCount
+                    );
+                })
+                .collect(Collectors.toList());
+    }
+
+    public List<VideoMapResponse> getVideosForMap(double minLat, double maxLat, double minLng, double maxLng) {
+        double safeMinLat = Math.min(minLat, maxLat);
+        double safeMaxLat = Math.max(minLat, maxLat);
+        double safeMinLng = Math.min(minLng, maxLng);
+        double safeMaxLng = Math.max(minLng, maxLng);
+
+        List<VideoMapPoint> points = videoRepository.findMapPoints(safeMinLat, safeMaxLat, safeMinLng, safeMaxLng);
+
+        return points.stream()
+                .filter(point -> Objects.nonNull(point.latitude()) && Objects.nonNull(point.longitude()))
+                .map(point -> {
+                    String thumbnailUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                            .path("/api/videos/thumbnail/")
+                            .path(point.thumbnailPath())
+                            .toUriString();
+                    return new VideoMapResponse(
+                            point.id(),
+                            point.title(),
+                            point.latitude(),
+                            point.longitude(),
+                            thumbnailUrl
                     );
                 })
                 .collect(Collectors.toList());
