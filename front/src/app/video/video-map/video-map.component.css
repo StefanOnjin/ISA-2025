@@ -81,21 +81,16 @@
   box-shadow: 0 4px 10px rgba(15, 23, 42, 0.3);
 }
 
-:host ::ng-deep .cluster-icon {
-  background: rgba(15, 23, 42, 0.85);
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  border: 2px solid #ffffff;
-  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.25);
-}
-
-:host ::ng-deep .cluster-badge {
+:host ::ng-deep .map-count {
+  position: absolute;
+  top: 0;
+  right: 8px;
+  background: #0f172a;
   color: #ffffff;
+  font-size: 12px;
   font-weight: 700;
-  font-size: 14px;
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.25);
+  border: 2px solid #ffffff;
 }

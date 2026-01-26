@@ -5,6 +5,7 @@ public record VideoMapResponse(
         String title,
         Double latitude,
         Double longitude,
-        String thumbnailUrl
+        String thumbnailUrl,
+        Long count
 ) {
 }

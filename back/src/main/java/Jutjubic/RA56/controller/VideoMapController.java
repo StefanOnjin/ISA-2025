@@ -24,13 +24,14 @@ public class VideoMapController {
             @RequestParam("minLat") String minLat,
             @RequestParam("maxLat") String maxLat,
             @RequestParam("minLng") String minLng,
-            @RequestParam("maxLng") String maxLng) {
+            @RequestParam("maxLng") String maxLng,
+            @RequestParam(value = "zoom", required = false) Integer zoom) {
         double parsedMinLat = parseDouble(minLat, "minLat");
         double parsedMaxLat = parseDouble(maxLat, "maxLat");
         double parsedMinLng = parseDouble(minLng, "minLng");
         double parsedMaxLng = parseDouble(maxLng, "maxLng");
 
-        List<VideoMapResponse> videos = videoService.getVideosForMap(parsedMinLat, parsedMaxLat, parsedMinLng, parsedMaxLng);
+        List<VideoMapResponse> videos = videoService.getVideosForMap(parsedMinLat, parsedMaxLat, parsedMinLng, parsedMaxLng, zoom);
         return ResponseEntity.ok(videos);
     }
 

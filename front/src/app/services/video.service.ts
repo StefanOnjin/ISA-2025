@@ -50,7 +50,9 @@ export class VideoService {
     return this.http.post(`${this.baseUrl}/upload`, formData, { headers: headers });
   }
 
-  getMapVideos(minLat: number, maxLat: number, minLng: number, maxLng: number): Observable<any[]> {
-    return this.http.get<any[]>(`http://localhost:8080/api/video-map/points?minLat=${minLat}&maxLat=${maxLat}&minLng=${minLng}&maxLng=${maxLng}`);
+  getMapVideos(minLat: number, maxLat: number, minLng: number, maxLng: number, zoom: number): Observable<any[]> {
+    return this.http.get<any[]>(
+      `http://localhost:8080/api/video-map/points?minLat=${minLat}&maxLat=${maxLat}&minLng=${minLng}&maxLng=${maxLng}&zoom=${zoom}`
+    );
   }
 }

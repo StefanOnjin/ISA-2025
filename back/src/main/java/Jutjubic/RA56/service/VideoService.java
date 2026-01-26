@@ -3,6 +3,7 @@ package Jutjubic.RA56.service;
 import Jutjubic.RA56.domain.User;
 import Jutjubic.RA56.domain.Video;
 import Jutjubic.RA56.dto.VideoDetailResponse;
+import Jutjubic.RA56.dto.VideoMapClusterRow;
 import Jutjubic.RA56.dto.VideoMapPoint;
 import Jutjubic.RA56.dto.VideoMapResponse;
 import Jutjubic.RA56.dto.VideoResponse;
@@ -64,30 +65,81 @@ public class VideoService {
                 .collect(Collectors.toList());
     }
 
-    public List<VideoMapResponse> getVideosForMap(double minLat, double maxLat, double minLng, double maxLng) {
+    private static final int DETAIL_ZOOM_MIN = 14;
+    private static final int MEDIUM_ZOOM_MIN = 12;
+
+    public List<VideoMapResponse> getVideosForMap(double minLat, double maxLat, double minLng, double maxLng, Integer zoom) {
         double safeMinLat = Math.min(minLat, maxLat);
         double safeMaxLat = Math.max(minLat, maxLat);
         double safeMinLng = Math.min(minLng, maxLng);
         double safeMaxLng = Math.max(minLng, maxLng);
 
-        List<VideoMapPoint> points = videoRepository.findMapPoints(safeMinLat, safeMaxLat, safeMinLng, safeMaxLng);
+        int resolvedZoom = zoom == null ? DETAIL_ZOOM_MIN : clampZoom(zoom);
+        if (resolvedZoom >= DETAIL_ZOOM_MIN) {
+            List<VideoMapPoint> points = videoRepository.findMapPoints(safeMinLat, safeMaxLat, safeMinLng, safeMaxLng);
+
+            return points.stream()
+                    .filter(point -> Objects.nonNull(point.latitude()) && Objects.nonNull(point.longitude()))
+                    .map(point -> {
+                        String thumbnailUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
+                                .path("/api/videos/thumbnail/")
+                                .path(point.thumbnailPath())
+                                .toUriString();
+                        return new VideoMapResponse(
+                                point.id(),
+                                point.title(),
+                                point.latitude(),
+                                point.longitude(),
+                                thumbnailUrl,
+                                1L
+                        );
+                    })
+                    .collect(Collectors.toList());
+        }
+
+        int tileZoom = resolvedZoom >= MEDIUM_ZOOM_MIN
+                ? clampZoom(resolvedZoom + 1)
+                : clampZoom(resolvedZoom + 1);
+
+        List<VideoMapClusterRow> points = videoRepository.findMapTilePoints(
+                safeMinLat,
+                safeMaxLat,
+                safeMinLng,
+                safeMaxLng,
+                tileZoom
+        );
 
         return points.stream()
-                .filter(point -> Objects.nonNull(point.latitude()) && Objects.nonNull(point.longitude()))
+                .filter(point -> Objects.nonNull(point.getLatitude()) && Objects.nonNull(point.getLongitude()))
                 .map(point -> {
                     String thumbnailUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
                             .path("/api/videos/thumbnail/")
-                            .path(point.thumbnailPath())
+                            .path(point.getThumbnailPath())
                             .toUriString();
                     return new VideoMapResponse(
-                            point.id(),
-                            point.title(),
-                            point.latitude(),
-                            point.longitude(),
-                            thumbnailUrl
+                            point.getId(),
+                            point.getTitle(),
+                            point.getLatitude(),
+                            point.getLongitude(),
+                            thumbnailUrl,
+                            point.getVideoCount() == null ? 1L : point.getVideoCount()
                     );
                 })
                 .collect(Collectors.toList());
+    }
+
+    public List<VideoMapResponse> getVideosForMap(double minLat, double maxLat, double minLng, double maxLng) {
+        return getVideosForMap(minLat, maxLat, minLng, maxLng, null);
+    }
+
+    private int clampZoom(int zoom) {
+        if (zoom < 0) {
+            return 0;
+        }
+        if (zoom > 19) {
+            return 19;
+        }
+        return zoom;
     }
 
     @Transactional
