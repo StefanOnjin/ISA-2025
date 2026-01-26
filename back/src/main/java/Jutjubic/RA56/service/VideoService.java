@@ -10,6 +10,7 @@ import Jutjubic.RA56.dto.VideoResponse;
 import Jutjubic.RA56.repository.VideoLikeRepository;
 import Jutjubic.RA56.repository.UserRepository;
 import Jutjubic.RA56.repository.VideoRepository;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Sort;
@@ -68,13 +69,31 @@ public class VideoService {
     private static final int DETAIL_ZOOM_MIN = 14;
     private static final int MEDIUM_ZOOM_MIN = 12;
 
-    public List<VideoMapResponse> getVideosForMap(double minLat, double maxLat, double minLng, double maxLng, Integer zoom) {
+    @Cacheable(value = "video-map-tiles", key = "#tileZoom + ':' + #minX + ':' + #maxX + ':' + #minY + ':' + #maxY + ':' + #zoom")
+    public List<VideoMapResponse> getVideosForMapTiles(int tileZoom, int minX, int maxX, int minY, int maxY, int zoom) {
+        int resolvedZoom = clampZoom(zoom);
+        int resolvedTileZoom = clampZoom(tileZoom);
+
+        int safeMinX = Math.min(minX, maxX);
+        int safeMaxX = Math.max(minX, maxX);
+        int safeMinY = Math.min(minY, maxY);
+        int safeMaxY = Math.max(minY, maxY);
+
+        safeMinX = clampTileCoord(safeMinX, resolvedTileZoom);
+        safeMaxX = clampTileCoord(safeMaxX, resolvedTileZoom);
+        safeMinY = clampTileCoord(safeMinY, resolvedTileZoom);
+        safeMaxY = clampTileCoord(safeMaxY, resolvedTileZoom);
+
+        double minLng = tileXToLng(safeMinX, resolvedTileZoom);
+        double maxLng = tileXToLng(safeMaxX + 1, resolvedTileZoom);
+        double maxLat = tileYToLat(safeMinY, resolvedTileZoom);
+        double minLat = tileYToLat(safeMaxY + 1, resolvedTileZoom);
+
         double safeMinLat = Math.min(minLat, maxLat);
         double safeMaxLat = Math.max(minLat, maxLat);
         double safeMinLng = Math.min(minLng, maxLng);
         double safeMaxLng = Math.max(minLng, maxLng);
 
-        int resolvedZoom = zoom == null ? DETAIL_ZOOM_MIN : clampZoom(zoom);
         if (resolvedZoom >= DETAIL_ZOOM_MIN) {
             List<VideoMapPoint> points = videoRepository.findMapPoints(safeMinLat, safeMaxLat, safeMinLng, safeMaxLng);
 
@@ -97,16 +116,12 @@ public class VideoService {
                     .collect(Collectors.toList());
         }
 
-        int tileZoom = resolvedZoom >= MEDIUM_ZOOM_MIN
-                ? clampZoom(resolvedZoom + 1)
-                : clampZoom(resolvedZoom + 1);
-
         List<VideoMapClusterRow> points = videoRepository.findMapTilePoints(
                 safeMinLat,
                 safeMaxLat,
                 safeMinLng,
                 safeMaxLng,
-                tileZoom
+                resolvedTileZoom
         );
 
         return points.stream()
@@ -128,10 +143,6 @@ public class VideoService {
                 .collect(Collectors.toList());
     }
 
-    public List<VideoMapResponse> getVideosForMap(double minLat, double maxLat, double minLng, double maxLng) {
-        return getVideosForMap(minLat, maxLat, minLng, maxLng, null);
-    }
-
     private int clampZoom(int zoom) {
         if (zoom < 0) {
             return 0;
@@ -140,6 +151,29 @@ public class VideoService {
             return 19;
         }
         return zoom;
+    }
+
+    private int clampTileCoord(int value, int zoom) {
+        if (zoom <= 0) {
+            return 0;
+        }
+        int max = (1 << zoom) - 1;
+        if (value < 0) {
+            return 0;
+        }
+        if (value > max) {
+            return max;
+        }
+        return value;
+    }
+
+    private double tileXToLng(int x, int zoom) {
+        return (x / Math.pow(2, zoom)) * 360 - 180;
+    }
+
+    private double tileYToLat(int y, int zoom) {
+        double n = Math.PI - (2 * Math.PI * y) / Math.pow(2, zoom);
+        return (180 / Math.PI) * Math.atan(Math.sinh(n));
     }
 
     @Transactional
@@ -191,6 +225,7 @@ public class VideoService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = "video-map-tiles", allEntries = true)
     public VideoResponse createVideo(String title, String description, String tags, Double latitude, Double longitude, MultipartFile thumbnailFile, MultipartFile videoFile, String username) {
         if (latitude == null || longitude == null) {
             throw new RuntimeException("Location coordinates are required.");

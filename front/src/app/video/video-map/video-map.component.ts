@@ -22,8 +22,8 @@ export class VideoMapComponent implements OnInit, OnDestroy {
   private debugLayer: L.LayerGroup | null = null;
   private loadTimer: number | null = null;
   private lastBoundsKey: string | null = null;
-  private loading = false;
-  private pendingRequest: { bounds: L.LatLngBounds; zoom: number } | null = null;
+  private tileCache = new Map<string, Map<number, VideoMapItem>>();
+  private readonly maxCachedTiles = 500;
   private readonly detailZoomMin = 14;
   private readonly mediumZoomMin = 12;
   private readonly debugTiles = new URLSearchParams(window.location.search).has('debugTiles');
@@ -91,39 +91,49 @@ export class VideoMapComponent implements OnInit, OnDestroy {
   }
 
   private loadMapPoints(bounds: L.LatLngBounds, zoom: number): void {
-    if (this.loading) {
-      this.pendingRequest = { bounds, zoom };
-      return;
-    }
-
-    const boundsKey = `${bounds.getSouthWest().lat.toFixed(4)}:${bounds.getSouthWest().lng.toFixed(4)}:${bounds.getNorthEast().lat.toFixed(4)}:${bounds.getNorthEast().lng.toFixed(4)}:${zoom}`;
+    const tileZoom = this.getTileZoom(zoom);
+    const minX = this.lngToTileX(bounds.getWest(), tileZoom);
+    const maxX = this.lngToTileX(bounds.getEast(), tileZoom);
+    const minY = this.latToTileY(bounds.getNorth(), tileZoom);
+    const maxY = this.latToTileY(bounds.getSouth(), tileZoom);
+    const modeKey = zoom >= this.detailZoomMin ? 'detail' : 'cluster';
+    const boundsKey = `${tileZoom}:${minX}:${maxX}:${minY}:${maxY}:${modeKey}`;
     if (this.lastBoundsKey === boundsKey) {
+      this.renderVisibleTiles(minX, maxX, minY, maxY, tileZoom, modeKey, zoom);
       return;
     }
     this.lastBoundsKey = boundsKey;
-    this.loading = true;
 
-    this.videoService.getMapVideos(
-      bounds.getSouthWest().lat,
-      bounds.getNorthEast().lat,
-      bounds.getSouthWest().lng,
-      bounds.getNorthEast().lng,
-      zoom
-    ).subscribe({
-      next: (items) => {
-        this.renderMarkers(items, zoom);
-      },
-      error: () => {
-        this.loading = false;
-      },
-      complete: () => {
-        this.loading = false;
-        if (this.pendingRequest) {
-          const nextRequest = this.pendingRequest;
-          this.pendingRequest = null;
-          this.loadMapPoints(nextRequest.bounds, nextRequest.zoom);
+    if (this.hasAllTiles(minX, maxX, minY, maxY, tileZoom, modeKey)) {
+      this.renderVisibleTiles(minX, maxX, minY, maxY, tileZoom, modeKey, zoom);
+      return;
+    }
+
+    const missing = this.collectMissingTiles(minX, maxX, minY, maxY, tileZoom, modeKey);
+    const chunks = this.chunkMissingTiles(missing, 8);
+    if (chunks.length === 0) {
+      this.renderVisibleTiles(minX, maxX, minY, maxY, tileZoom, modeKey, zoom);
+      return;
+    }
+
+    chunks.forEach(chunk => {
+      this.videoService.getMapVideos(
+        tileZoom,
+        chunk.minX,
+        chunk.maxX,
+        chunk.minY,
+        chunk.maxY,
+        zoom
+      ).subscribe({
+        next: (items) => {
+          this.markTilesLoaded(chunk.minX, chunk.maxX, chunk.minY, chunk.maxY, tileZoom, modeKey);
+          this.storeTileItems(items, tileZoom, modeKey);
+          this.renderVisibleTiles(minX, maxX, minY, maxY, tileZoom, modeKey, zoom);
+        },
+        error: () => {
+          this.renderVisibleTiles(minX, maxX, minY, maxY, tileZoom, modeKey, zoom);
         }
-      }
+      });
     });
   }
 
@@ -223,5 +233,137 @@ export class VideoMapComponent implements OnInit, OnDestroy {
   private tileYToLat(y: number, zoom: number): number {
     const n = Math.PI - (2 * Math.PI * y) / Math.pow(2, zoom);
     return (180 / Math.PI) * Math.atan(Math.sinh(n));
+  }
+
+  private getTileKey(tileZoom: number, x: number, y: number, modeKey: string): string {
+    return `${tileZoom}:${x}:${y}:${modeKey}`;
+  }
+
+  private storeTileItems(items: VideoMapItem[], tileZoom: number, modeKey: string): void {
+    items.forEach(item => {
+      const x = this.lngToTileX(item.longitude, tileZoom);
+      const y = this.latToTileY(item.latitude, tileZoom);
+      const key = this.getTileKey(tileZoom, x, y, modeKey);
+      const existing = this.touchTile(key) ?? new Map<number, VideoMapItem>();
+      existing.set(item.id, item);
+      this.tileCache.set(key, existing);
+      this.evictIfNeeded();
+    });
+  }
+
+  private renderVisibleTiles(minX: number, maxX: number, minY: number, maxY: number, tileZoom: number, modeKey: string, zoom: number): void {
+    const aggregated = new Map<number, VideoMapItem>();
+    for (let x = minX; x <= maxX; x += 1) {
+      for (let y = minY; y <= maxY; y += 1) {
+        const key = this.getTileKey(tileZoom, x, y, modeKey);
+        const items = this.touchTile(key);
+        if (!items) {
+          continue;
+        }
+        items.forEach(item => {
+          aggregated.set(item.id, item);
+        });
+      }
+    }
+    this.renderMarkers(Array.from(aggregated.values()), zoom);
+  }
+
+  private hasAllTiles(minX: number, maxX: number, minY: number, maxY: number, tileZoom: number, modeKey: string): boolean {
+    for (let x = minX; x <= maxX; x += 1) {
+      for (let y = minY; y <= maxY; y += 1) {
+        const key = this.getTileKey(tileZoom, x, y, modeKey);
+        if (!this.tileCache.has(key)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  private collectMissingTiles(
+    minX: number,
+    maxX: number,
+    minY: number,
+    maxY: number,
+    tileZoom: number,
+    modeKey: string
+  ): Array<{ x: number; y: number }> {
+    const missing: Array<{ x: number; y: number }> = [];
+    for (let x = minX; x <= maxX; x += 1) {
+      for (let y = minY; y <= maxY; y += 1) {
+        const key = this.getTileKey(tileZoom, x, y, modeKey);
+        if (!this.tileCache.has(key)) {
+          missing.push({ x, y });
+        }
+      }
+    }
+    return missing;
+  }
+
+  private chunkMissingTiles(
+    tiles: Array<{ x: number; y: number }>,
+    chunkSize: number
+  ): Array<{ minX: number; maxX: number; minY: number; maxY: number }> {
+    if (tiles.length === 0) {
+      return [];
+    }
+
+    const chunkMap = new Map<string, { minX: number; maxX: number; minY: number; maxY: number }>();
+    tiles.forEach(tile => {
+      const chunkX = Math.floor(tile.x / chunkSize);
+      const chunkY = Math.floor(tile.y / chunkSize);
+      const key = `${chunkX}:${chunkY}`;
+      const existing = chunkMap.get(key);
+      if (!existing) {
+        const startX = chunkX * chunkSize;
+        const startY = chunkY * chunkSize;
+        chunkMap.set(key, {
+          minX: Math.max(startX, tile.x),
+          maxX: Math.min(startX + chunkSize - 1, tile.x),
+          minY: Math.max(startY, tile.y),
+          maxY: Math.min(startY + chunkSize - 1, tile.y)
+        });
+        return;
+      }
+      existing.minX = Math.min(existing.minX, tile.x);
+      existing.maxX = Math.max(existing.maxX, tile.x);
+      existing.minY = Math.min(existing.minY, tile.y);
+      existing.maxY = Math.max(existing.maxY, tile.y);
+    });
+
+    return Array.from(chunkMap.values());
+  }
+
+  private markTilesLoaded(minX: number, maxX: number, minY: number, maxY: number, tileZoom: number, modeKey: string): void {
+    for (let x = minX; x <= maxX; x += 1) {
+      for (let y = minY; y <= maxY; y += 1) {
+        const key = this.getTileKey(tileZoom, x, y, modeKey);
+        if (!this.tileCache.has(key)) {
+          this.tileCache.set(key, new Map<number, VideoMapItem>());
+        }
+        this.touchTile(key);
+        this.evictIfNeeded();
+      }
+    }
+  }
+
+  private touchTile(key: string): Map<number, VideoMapItem> | undefined {
+    const existing = this.tileCache.get(key);
+    if (!existing) {
+      return undefined;
+    }
+    this.tileCache.delete(key);
+    this.tileCache.set(key, existing);
+    return existing;
+  }
+
+  private evictIfNeeded(): void {
+    while (this.tileCache.size > this.maxCachedTiles) {
+      const oldestKey = this.tileCache.keys().next().value as string | undefined;
+      if (!oldestKey) {
+        return;
+      }
+      this.tileCache.delete(oldestKey);
+    }
   }
 }

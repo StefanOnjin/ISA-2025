@@ -21,23 +21,33 @@ public class VideoMapController {
 
     @GetMapping("/points")
     public ResponseEntity<List<VideoMapResponse>> getVideosForMap(
-            @RequestParam("minLat") String minLat,
-            @RequestParam("maxLat") String maxLat,
-            @RequestParam("minLng") String minLng,
-            @RequestParam("maxLng") String maxLng,
-            @RequestParam(value = "zoom", required = false) Integer zoom) {
-        double parsedMinLat = parseDouble(minLat, "minLat");
-        double parsedMaxLat = parseDouble(maxLat, "maxLat");
-        double parsedMinLng = parseDouble(minLng, "minLng");
-        double parsedMaxLng = parseDouble(maxLng, "maxLng");
+            @RequestParam("tileZoom") String tileZoom,
+            @RequestParam("minX") String minX,
+            @RequestParam("maxX") String maxX,
+            @RequestParam("minY") String minY,
+            @RequestParam("maxY") String maxY,
+            @RequestParam("zoom") String zoom) {
+        int parsedTileZoom = parseInt(tileZoom, "tileZoom");
+        int parsedMinX = parseInt(minX, "minX");
+        int parsedMaxX = parseInt(maxX, "maxX");
+        int parsedMinY = parseInt(minY, "minY");
+        int parsedMaxY = parseInt(maxY, "maxY");
+        int parsedZoom = parseInt(zoom, "zoom");
 
-        List<VideoMapResponse> videos = videoService.getVideosForMap(parsedMinLat, parsedMaxLat, parsedMinLng, parsedMaxLng, zoom);
+        List<VideoMapResponse> videos = videoService.getVideosForMapTiles(
+                parsedTileZoom,
+                parsedMinX,
+                parsedMaxX,
+                parsedMinY,
+                parsedMaxY,
+                parsedZoom
+        );
         return ResponseEntity.ok(videos);
     }
 
-    private double parseDouble(String value, String fieldName) {
+    private int parseInt(String value, String fieldName) {
         try {
-            return Double.parseDouble(value);
+            return Integer.parseInt(value);
         } catch (NumberFormatException ex) {
             throw new IllegalArgumentException("Invalid " + fieldName + " value: " + value);
         }

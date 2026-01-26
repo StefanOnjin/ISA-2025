@@ -33,4 +33,12 @@
         </resources>
     </cache>
 
+    <cache alias="video-map-tiles" uses-template="default-cache-template">
+        <key-type>java.lang.String</key-type>
+        <value-type>java.lang.Object</value-type>
+        <resources>
+            <heap>500</heap>
+        </resources>
+    </cache>
+
 </config>
