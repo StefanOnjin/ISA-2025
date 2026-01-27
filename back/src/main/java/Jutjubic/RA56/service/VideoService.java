@@ -17,12 +17,15 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
+
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 
 @Service
 public class VideoService {
@@ -31,24 +34,27 @@ public class VideoService {
     private final FileStorageService fileStorageService;
     private final UserRepository userRepository;
     private final VideoLikeRepository likeRepository;
+    private final CacheManager cacheManager;
+    
+    @Value("${app.base-url}") 
+    private String baseUrl; 
 
     public VideoService(VideoRepository videoRepository,
             FileStorageService fileStorageService,
             UserRepository userRepository,
-            VideoLikeRepository likeRepository) {
+            VideoLikeRepository likeRepository,
+            CacheManager cacheManager) {
         this.videoRepository = videoRepository;
         this.fileStorageService = fileStorageService;
         this.userRepository = userRepository;
         this.likeRepository = likeRepository;
+        this.cacheManager = cacheManager;
     }
 
     public List<VideoResponse> getAllVideos() {
         return videoRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt")).stream()
                 .map(video -> {
-                    String thumbnailUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
-                            .path("/api/videos/thumbnail/")
-                            .path(video.getThumbnailPath())
-                            .toUriString();
+                    String thumbnailUrl = this.baseUrl + "/api/videos/thumbnail/" + video.getThumbnailPath(); 
                     long likesCount = likeRepository.countByVideoId(video.getId());
                     return new VideoResponse(
                             video.getId(),
@@ -69,8 +75,8 @@ public class VideoService {
     private static final int DETAIL_ZOOM_MIN = 14;
     private static final int MEDIUM_ZOOM_MIN = 12;
 
-    @Cacheable(value = "video-map-tiles", key = "#tileZoom + ':' + #minX + ':' + #maxX + ':' + #minY + ':' + #maxY + ':' + #zoom")
-    public List<VideoMapResponse> getVideosForMapTiles(int tileZoom, int minX, int maxX, int minY, int maxY, int zoom) {
+    @Cacheable(value = "video-map-tiles", key = "#tileZoom + ':' + #minX + ':' + #maxX + ':' + #minY + ':' + #maxY + ':' + #zoom + ':' + #period")
+    public List<VideoMapResponse> getVideosForMapTiles(int tileZoom, int minX, int maxX, int minY, int maxY, int zoom, String period) {
         int resolvedZoom = clampZoom(zoom);
         int resolvedTileZoom = clampZoom(tileZoom);
 
@@ -93,17 +99,39 @@ public class VideoService {
         double safeMaxLat = Math.max(minLat, maxLat);
         double safeMinLng = Math.min(minLng, maxLng);
         double safeMaxLng = Math.max(minLng, maxLng);
+        
+        LocalDateTime startDate = null; 
+        
+        switch(period) {
+        	case "30days":
+        		startDate = LocalDateTime.now().minusDays(30); 
+        		break; 
+        	case "currentYear":
+        		startDate = LocalDateTime.now().withDayOfYear(1).withHour(0).withMinute(0).withSecond(0); 
+        		break; 
+        	case "all": 
+        	default: 
+        		break; 
+        }
 
         if (resolvedZoom >= DETAIL_ZOOM_MIN) {
-            List<VideoMapPoint> points = videoRepository.findMapPoints(safeMinLat, safeMaxLat, safeMinLng, safeMaxLng);
+        	List<VideoMapPoint> points; 
+        	
+        	if (startDate == null) {
+        		points = videoRepository.findMapPoints(
+        				safeMinLat, safeMaxLat, safeMinLng, safeMaxLng
+        		);
+        	} else {
+        		points = videoRepository.findMapPointsFilteredByDate(
+        				safeMinLat, safeMaxLat, safeMinLng, safeMaxLng, startDate 
+        		);
+        	}
+        	
 
             return points.stream()
                     .filter(point -> Objects.nonNull(point.latitude()) && Objects.nonNull(point.longitude()))
                     .map(point -> {
-                        String thumbnailUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
-                                .path("/api/videos/thumbnail/")
-                                .path(point.thumbnailPath())
-                                .toUriString();
+                        String thumbnailUrl = this.baseUrl + "/api/videos/thumbnail/" + point.thumbnailPath();
                         return new VideoMapResponse(
                                 point.id(),
                                 point.title(),
@@ -121,16 +149,14 @@ public class VideoService {
                 safeMaxLat,
                 safeMinLng,
                 safeMaxLng,
-                resolvedTileZoom
+                resolvedTileZoom,
+                startDate
         );
 
         return points.stream()
                 .filter(point -> Objects.nonNull(point.getLatitude()) && Objects.nonNull(point.getLongitude()))
                 .map(point -> {
-                    String thumbnailUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
-                            .path("/api/videos/thumbnail/")
-                            .path(point.getThumbnailPath())
-                            .toUriString();
+                    String thumbnailUrl = this.baseUrl + "/api/videos/thumbnail/" + point.getThumbnailPath();
                     return new VideoMapResponse(
                             point.getId(),
                             point.getTitle(),
@@ -176,6 +202,15 @@ public class VideoService {
         return (180 / Math.PI) * Math.atan(Math.sinh(n));
     }
 
+    private int lngToTileX(double lng, int zoom) {
+        return (int) Math.floor((lng + 180) / 360 * Math.pow(2, zoom));
+    }
+
+    private int latToTileY(double lat, int zoom) {
+        double latRad = Math.toRadians(lat);
+        return (int) Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * Math.pow(2, zoom));
+    }
+
     @Transactional
     public VideoDetailResponse getVideoById(Long id, String userEmail) {
         Video video = videoRepository.findOneByIdForUpdate(id);
@@ -187,15 +222,9 @@ public class VideoService {
         video.setViews(currentViews + 1);
         videoRepository.save(video);
 
-        String thumbnailUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path("/api/videos/thumbnail/")
-                .path(video.getThumbnailPath())
-                .toUriString();
+        String thumbnailUrl = this.baseUrl + "/api/videos/thumbnail/" + video.getThumbnailPath();
         
-        String videoUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path("/api/videos/play/")
-                .path(video.getVideoPath())
-                .toUriString();
+        String videoUrl = this.baseUrl + "/api/videos/play/" + video.getVideoPath();
 
         long likesCount = likeRepository.countByVideoId(video.getId());
         boolean likedByUser = false;
@@ -225,7 +254,6 @@ public class VideoService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    @CacheEvict(value = "video-map-tiles", allEntries = true)
     public VideoResponse createVideo(String title, String description, String tags, Double latitude, Double longitude, MultipartFile thumbnailFile, MultipartFile videoFile, String username) {
         if (latitude == null || longitude == null) {
             throw new RuntimeException("Location coordinates are required.");
@@ -254,11 +282,10 @@ public class VideoService {
             );
 
             Video savedVideo = videoRepository.save(video);
+
+            evictVideoMapCacheFor(savedVideo);
             
-            String thumbnailUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
-                .path("/api/videos/thumbnail/")
-                .path(savedVideo.getThumbnailPath())
-                .toUriString();
+            String thumbnailUrl = this.baseUrl + "/api/videos/thumbnail/" + savedVideo.getThumbnailPath();
 
             return new VideoResponse(
                 savedVideo.getId(),
@@ -281,6 +308,13 @@ public class VideoService {
                 fileStorageService.deleteFile(videoFileName, true);
             }
             throw new RuntimeException("Failed to create video. " + e.getMessage(), e);
+        }
+    }
+
+    private void evictVideoMapCacheFor(Video video) {
+        Cache videoMapCache = cacheManager.getCache("video-map-tiles");
+        if (videoMapCache != null) {
+            videoMapCache.clear();
         }
     }
 

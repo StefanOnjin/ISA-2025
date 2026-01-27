@@ -94,3 +94,25 @@
   box-shadow: 0 6px 14px rgba(15, 23, 42, 0.25);
   border: 2px solid #ffffff;
 }
+
+.map-filter-bar {
+  margin-bottom: 16px;
+}
+
+.map-filter-bar label {
+  font-size: 14px;
+  font-weight: 600;
+  margin-right: 8px;
+  color: #475569;
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  outline-color: #4f46e5;
+}

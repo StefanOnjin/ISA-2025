@@ -3,5 +3,13 @@
     <h2>Video map</h2>
     <p>Zoom and pan to load videos inside the current map bounds.</p>
   </div>
+  <div class="map-filter-bar">
+    <label for="period-filter">Filter by period:</label>
+    <select id="period-filter" class="filter-select" (change)="onPeriodChange($event)">
+      <option value="all">Sve vreme</option>
+      <option value="30days">Poslednjih 30 dana</option>
+      <option value="currentYear">Tekuća godina</option>
+    </select>
+  </div>
   <div id="video-map" class="map-canvas"></div>
 </section>

@@ -50,9 +50,28 @@ export class VideoService {
     return this.http.post(`${this.baseUrl}/upload`, formData, { headers: headers });
   }
 
-  getMapVideos(tileZoom: number, minX: number, maxX: number, minY: number, maxY: number, zoom: number): Observable<any[]> {
-    return this.http.get<any[]>(
-      `http://localhost:8080/api/video-map/points?tileZoom=${tileZoom}&minX=${minX}&maxX=${maxX}&minY=${minY}&maxY=${maxY}&zoom=${zoom}`
-    );
-  }
+  getMapVideos(
+    tileZoom: number,
+    minX: number,
+    maxX: number,
+    minY: number,
+    maxY: number,
+    zoom: number,
+    period: string = 'all'
+  ): Observable<any[]> {
+
+    const params = {
+      tileZoom: tileZoom.toString(),
+      minX: minX.toString(),
+      maxX: maxX.toString(),
+      minY: minY.toString(),
+      maxY: maxY.toString(),
+      zoom: zoom.toString(),
+      period: period
+    };
+
+  return this.http.get<any[]>(
+    'http://localhost:8080/api/video-map/points', { params }
+  );
+}
 }

@@ -27,6 +27,7 @@ export class VideoMapComponent implements OnInit, OnDestroy {
   private readonly detailZoomMin = 14;
   private readonly mediumZoomMin = 12;
   private readonly debugTiles = new URLSearchParams(window.location.search).has('debugTiles');
+  private selectedPeriod = "all"; 
 
   constructor(private videoService: VideoService) {}
 
@@ -45,6 +46,13 @@ export class VideoMapComponent implements OnInit, OnDestroy {
       window.clearTimeout(this.loadTimer);
       this.loadTimer = null;
     }
+  }
+
+  public onPeriodChange(event: Event) : void {
+    const select = event.target as HTMLSelectElement; 
+    this.selectedPeriod = select.value; 
+    this.lastBoundsKey = null; 
+    this.scheduleLoad(); 
   }
 
   private initMap(): void {
@@ -97,7 +105,7 @@ export class VideoMapComponent implements OnInit, OnDestroy {
     const minY = this.latToTileY(bounds.getNorth(), tileZoom);
     const maxY = this.latToTileY(bounds.getSouth(), tileZoom);
     const modeKey = zoom >= this.detailZoomMin ? 'detail' : 'cluster';
-    const boundsKey = `${tileZoom}:${minX}:${maxX}:${minY}:${maxY}:${modeKey}`;
+    const boundsKey = `${tileZoom}:${minX}:${maxX}:${minY}:${maxY}:${modeKey}:${this.selectedPeriod}`;
     if (this.lastBoundsKey === boundsKey) {
       this.renderVisibleTiles(minX, maxX, minY, maxY, tileZoom, modeKey, zoom);
       return;
@@ -123,7 +131,8 @@ export class VideoMapComponent implements OnInit, OnDestroy {
         chunk.maxX,
         chunk.minY,
         chunk.maxY,
-        zoom
+        zoom,
+        this.selectedPeriod
       ).subscribe({
         next: (items) => {
           this.markTilesLoaded(chunk.minX, chunk.maxX, chunk.minY, chunk.maxY, tileZoom, modeKey);

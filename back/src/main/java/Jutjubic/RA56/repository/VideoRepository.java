@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -37,6 +38,27 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
             @Param("minLng") double minLng,
             @Param("maxLng") double maxLng
     );
+    
+    @Query("""
+    		SELECT new Jutjubic.RA56.dto.VideoMapPoint(
+    		      v.id,
+    		      v.title,
+    		      v.latitude,
+    		      v.longitude,
+    		      v.thumbnailPath
+    		  )
+    		  FROM Video v
+    		  WHERE v.latitude BETWEEN :minLat AND :maxLat
+    		    AND v.longitude BETWEEN :minLng AND :maxLng
+    		    AND v.createdAt >= :startDate 
+    		""")
+    List<VideoMapPoint> findMapPointsFilteredByDate(
+    			@Param("minLat") double minLat, 
+    			@Param("maxLat") double maxLat, 
+    			@Param("minLng") double minLng, 
+    			@Param("maxLng") double maxLng,
+    			@Param("startDate") LocalDateTime startDate
+    		);
 
     @Query(value = """
             SELECT id,
@@ -63,6 +85,7 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
                     FROM videos v
                     WHERE v.latitude BETWEEN :minLat AND :maxLat
                       AND v.longitude BETWEEN :minLng AND :maxLng
+          AND (v.created_at >= COALESCE(:startDate, '1000-01-01 00:00:00'::timestamp))
                 ) v
             ) t
             WHERE rn = 1
@@ -72,6 +95,8 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
             @Param("maxLat") double maxLat,
             @Param("minLng") double minLng,
             @Param("maxLng") double maxLng,
-            @Param("tileZoom") int tileZoom
+            @Param("tileZoom") int tileZoom,
+            @Param("startDate") LocalDateTime startDate
     );
+
 }

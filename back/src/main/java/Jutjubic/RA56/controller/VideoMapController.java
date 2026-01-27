@@ -26,7 +26,9 @@ public class VideoMapController {
             @RequestParam("maxX") String maxX,
             @RequestParam("minY") String minY,
             @RequestParam("maxY") String maxY,
-            @RequestParam("zoom") String zoom) {
+            @RequestParam("zoom") String zoom,
+    		@RequestParam(name="period", defaultValue= "all") String period)
+    {
         int parsedTileZoom = parseInt(tileZoom, "tileZoom");
         int parsedMinX = parseInt(minX, "minX");
         int parsedMaxX = parseInt(maxX, "maxX");
@@ -40,7 +42,8 @@ public class VideoMapController {
                 parsedMaxX,
                 parsedMinY,
                 parsedMaxY,
-                parsedZoom
+                parsedZoom,
+                period
         );
         return ResponseEntity.ok(videos);
     }
