@@ -49,10 +49,12 @@ export class VideoMapComponent implements OnInit, OnDestroy {
   }
 
   public onPeriodChange(event: Event) : void {
-    const select = event.target as HTMLSelectElement; 
-    this.selectedPeriod = select.value; 
-    this.lastBoundsKey = null; 
-    this.scheduleLoad(); 
+    const select = event.target as HTMLSelectElement;
+    this.selectedPeriod = select.value;
+    // Period change invalidates cached tiles because cache keys are period-aware.
+    this.lastBoundsKey = null;
+    this.tileCache.clear();
+    this.scheduleLoad();
   }
 
   private initMap(): void {
@@ -245,7 +247,7 @@ export class VideoMapComponent implements OnInit, OnDestroy {
   }
 
   private getTileKey(tileZoom: number, x: number, y: number, modeKey: string): string {
-    return `${tileZoom}:${x}:${y}:${modeKey}`;
+    return `${tileZoom}:${x}:${y}:${modeKey}:${this.selectedPeriod}`;
   }
 
   private storeTileItems(items: VideoMapItem[], tileZoom: number, modeKey: string): void {
