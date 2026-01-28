@@ -314,7 +314,48 @@ public class VideoService {
     private void evictVideoMapCacheFor(Video video) {
         Cache videoMapCache = cacheManager.getCache("video-map-tiles");
         if (videoMapCache != null) {
+            if (video.getLatitude() == null || video.getLongitude() == null) {
+                videoMapCache.clear();
+                return;
+            }
+
+            Object nativeCache = videoMapCache.getNativeCache();
+            if (nativeCache instanceof javax.cache.Cache<?, ?> jcache) {
+                for (javax.cache.Cache.Entry<?, ?> entry : jcache) {
+                    Object keyObj = entry.getKey();
+                    if (!(keyObj instanceof String key)) {
+                        continue;
+                    }
+                    if (shouldEvictMapKeyForVideo(key, video.getLatitude(), video.getLongitude())) {
+                        videoMapCache.evict(key);
+                    }
+                }
+                return;
+            }
+
             videoMapCache.clear();
+        }
+    }
+
+    private boolean shouldEvictMapKeyForVideo(String key, double latitude, double longitude) {
+        String[] parts = key.split(":");
+        if (parts.length < 7) {
+            return false;
+        }
+        try {
+            int tileZoom = Integer.parseInt(parts[0]);
+            int minX = Integer.parseInt(parts[1]);
+            int maxX = Integer.parseInt(parts[2]);
+            int minY = Integer.parseInt(parts[3]);
+            int maxY = Integer.parseInt(parts[4]);
+            int tileX = lngToTileX(longitude, tileZoom);
+            int tileY = latToTileY(latitude, tileZoom);
+            return tileX >= Math.min(minX, maxX)
+                    && tileX <= Math.max(minX, maxX)
+                    && tileY >= Math.min(minY, maxY)
+                    && tileY <= Math.max(minY, maxY);
+        } catch (NumberFormatException ex) {
+            return false;
         }
     }
 

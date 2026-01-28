@@ -14,7 +14,7 @@ public class CacheWarmupService {
         this.videoService = videoService;
     }
 
-    @Scheduled(cron = "* * 2 * * ?") // 2am
+    @Scheduled(cron = "0 0 2 * * ?") // 2am
     public void warmUpVideoMapCache() {
         System.out.println("Starting cache warmup for video map at " + LocalDateTime.now());
 
