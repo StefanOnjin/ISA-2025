@@ -156,11 +156,18 @@ export class VideoMapComponent implements OnInit, OnDestroy {
     this.markersLayer.clearLayers();
 
     items.forEach(item => {
+      const scale = this.getMarkerScale(zoom);
+      const baseWidth = 140;
+      const baseHeight = 130;
+      const baseAnchorX = 70;
+      const baseAnchorY = 124;
+      const iconWidth = Math.round(baseWidth * scale);
+      const iconHeight = Math.round(baseHeight * scale);
       const countBadge = item.count && item.count > 1
         ? `<div class="map-count">${item.count}</div>`
         : '';
       const markerHtml = `
-        <div class="map-pin">
+        <div class="map-pin" style="transform: scale(${scale});">
           <div class="map-card">
             <img src="${item.thumbnailUrl}" alt="${item.title}" />
             <div class="map-card-title">${item.title}</div>
@@ -174,8 +181,8 @@ export class VideoMapComponent implements OnInit, OnDestroy {
         icon: L.divIcon({
           className: 'map-marker',
           html: markerHtml,
-          iconSize: [140, 130],
-          iconAnchor: [70, 124]
+          iconSize: [iconWidth, iconHeight],
+          iconAnchor: [Math.round(baseAnchorX * scale), Math.round(baseAnchorY * scale)]
         })
       });
 
@@ -223,6 +230,16 @@ export class VideoMapComponent implements OnInit, OnDestroy {
       return Math.min(19, zoom + 1);
     }
     return Math.min(19, Math.max(0, zoom + 1));
+  }
+
+  private getMarkerScale(zoom: number): number {
+    if (zoom >= this.detailZoomMin) {
+      return 1;
+    }
+    if (zoom >= this.mediumZoomMin) {
+      return 0.8;
+    }
+    return 0.6;
   }
 
   private lngToTileX(lng: number, zoom: number): number {

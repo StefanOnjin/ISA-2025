@@ -36,6 +36,7 @@
   position: relative;
   width: 140px;
   height: 130px;
+  transform-origin: 50% 100%;
 }
 
 :host ::ng-deep .map-card {

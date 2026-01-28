@@ -2,7 +2,7 @@
 WITH owner AS (
     SELECT id
     FROM users
-    WHERE email = 'milankecmanbp@gmail.com'
+    WHERE email = 'strahinjaponjevic03@gmail.com'
     LIMIT 1
 )
 INSERT INTO videos (
@@ -22,8 +22,8 @@ SELECT
     'Auto generated for tiles map.' AS description,
     'test,map' AS tags,
     0 AS views,
-    'seed-thumbnail.jpg' AS thumbnail_path,
-    'seed-video.mp4' AS video_path,
+    'horse.jpg' AS thumbnail_path,
+    'video4.mp4' AS video_path,
     NOW() AS created_at,
     (35.0 + (70.0 - 35.0) * random()) AS latitude,
     (-10.0 + (40.0 - -10.0) * random()) AS longitude,
