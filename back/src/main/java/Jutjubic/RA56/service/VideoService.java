@@ -144,12 +144,14 @@ public class VideoService {
                     .collect(Collectors.toList());
         }
 
+        int clusterZoom = resolvedTileZoom;
+
         List<VideoMapClusterRow> points = videoRepository.findMapTilePoints(
                 safeMinLat,
                 safeMaxLat,
                 safeMinLng,
                 safeMaxLng,
-                resolvedTileZoom,
+                clusterZoom,
                 startDate
         );
 
