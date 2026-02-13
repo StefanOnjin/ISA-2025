@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface VideoRepository extends JpaRepository<Video, Long> {
@@ -19,6 +20,8 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT v FROM Video v WHERE v.id = :id")
     Video findOneByIdForUpdate(@Param("id") Long id);
+
+    Optional<Video> findByVideoPath(String videoPath);
 
     @Query("""
             SELECT new Jutjubic.RA56.dto.VideoMapPoint(

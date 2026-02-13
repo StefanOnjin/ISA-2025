@@ -10,6 +10,8 @@ import { VideoUploadComponent } from './video/video-upload/video-upload.componen
 
 import { VideoDetailComponent } from './video/video-detail/video-detail.component';
 import { VideoMapComponent } from './video/video-map/video-map.component';
+import { VideoPremieresComponent } from './video/video-premieres/video-premieres.component';
+import { VideoPremierComponent } from './video/video-premier/video-premier.component';
 
 const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
@@ -17,6 +19,8 @@ const routes: Routes = [
   { path: 'register', component: RegisterComponent },
   { path: 'home', component: HomeComponent },
   { path: 'map', component: VideoMapComponent },
+  { path: 'premieres', component: VideoPremieresComponent },
+  { path: 'premiers/:id', component: VideoPremierComponent },
   { path: 'upload', component: VideoUploadComponent, canActivate: [AuthGuard] },
   { path: 'videos/:id', component: VideoDetailComponent },
   { path: 'users/:username', component: UserProfileComponent },

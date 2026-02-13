@@ -1,6 +1,6 @@
 <div class="container" *ngIf="videos.length > 0; else noVideos">
   <div class="video-grid">
-    <a *ngFor="let video of videos" [routerLink]="['/videos', video.id]" class="video-card-link">
+    <a *ngFor="let video of videos" [routerLink]="getVideoLink(video)" class="video-card-link">
       <div class="video-card">
         <div class="thumbnail-container">
           <img [src]="video.thumbnailUrl" alt="Thumbnail for {{ video.title }}" class="thumbnail">

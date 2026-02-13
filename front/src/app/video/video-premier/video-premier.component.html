@@ -1,0 +1,49 @@
+<div class="page-container" *ngIf="premier; else errorTpl">
+  <div class="main-content">
+    <div class="title-row">
+      <h1 class="title">{{ premier.title }}</h1>
+    </div>
+    <div class="meta-row">
+      <span class="view-count">Premiere: {{ premier.scheduledAt | date: 'medium' }}</span>
+    </div>
+    <div class="meta-row">
+      <span class="status-text">{{ startsInLabel }}</span>
+    </div>
+
+    <div class="video-center-wrap">
+      <div class="video-player-container" *ngIf="isLive; else waitingTpl">
+        <video
+          #premierPlayer
+          class="video-player"
+          controls
+          autoplay
+          (loadedmetadata)="onMetadataLoaded()"
+          (timeupdate)="onTimeUpdate()"
+          (seeking)="onSeeking()">
+          <source [src]="premier.videoUrl" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      </div>
+      <ng-template #waitingTpl>
+        <div class="video-player-container waiting">
+          <img [src]="premier.thumbnailUrl" [alt]="premier.title" class="waiting-thumb" />
+        </div>
+      </ng-template>
+    </div>
+
+    <p class="note" *ngIf="isLive">Premiere is live. Seeking backward is disabled.</p>
+    <p class="note" *ngIf="!isLive">The broadcast has not started yet. This page will switch to live automatically.</p>
+
+    <hr />
+    <p class="description">{{ premier.description }}</p>
+
+    <button class="action-button back-btn" type="button" (click)="backToPremieres()">Back to premieres</button>
+  </div>
+</div>
+
+<ng-template #errorTpl>
+  <div class="page-container">
+    <p class="error">{{ errorMessage || 'Premiere is not available.' }}</p>
+    <button class="action-button back-btn" type="button" (click)="backToPremieres()">Back to premieres</button>
+  </div>
+</ng-template>

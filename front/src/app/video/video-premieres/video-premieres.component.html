@@ -1,0 +1,37 @@
+<div class="premieres-page">
+  <header class="premieres-header">
+    <h1>Premieres</h1>
+    <p>Scheduled videos that are upcoming or currently live.</p>
+  </header>
+
+  <p *ngIf="errorMessage" class="error-message">{{ errorMessage }}</p>
+
+  <div class="premieres-grid" *ngIf="premieres.length > 0; else noPremieres">
+    <article class="premiere-card" *ngFor="let card of premieres; trackBy: trackByPremiereId">
+      <img [src]="card.thumbnailUrl" [alt]="card.title" class="thumb" />
+      <div class="card-body">
+        <div class="status-row">
+          <span class="status live" *ngIf="card.isLive">LIVE</span>
+          <span class="status upcoming" *ngIf="!card.isLive">UPCOMING</span>
+          <span class="countdown">{{ card.countdownLabel }}</span>
+        </div>
+        <h3>{{ card.title }}</h3>
+        <p class="description">{{ card.description }}</p>
+        <p class="scheduled">
+          Scheduled premiere: <strong>{{ card.scheduledAt | date: 'medium' }}</strong>
+        </p>
+        <button
+          type="button"
+          class="watch-btn"
+          [disabled]="!card.isLive"
+          (click)="openPremiere(card)">
+          {{ card.isLive ? 'Watch premiere' : 'Available at scheduled time' }}
+        </button>
+      </div>
+    </article>
+  </div>
+
+  <ng-template #noPremieres>
+    <p class="empty" *ngIf="!errorMessage">There are no active or scheduled premieres right now.</p>
+  </ng-template>
+</div>

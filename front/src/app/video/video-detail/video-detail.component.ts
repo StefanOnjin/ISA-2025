@@ -70,7 +70,7 @@ export class VideoDetailComponent implements OnInit {
 
   handleGuestAction(): void {
     if (!this.authService.isAuthenticated()) {
-      this.guestNotice = 'Prijavite se da biste mogli da lajkujete ili komentarisete.';
+      this.guestNotice = 'Sign in to like or comment.';
       return;
     }
 

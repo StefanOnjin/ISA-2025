@@ -2,6 +2,8 @@ package Jutjubic.RA56.service;
 
 import Jutjubic.RA56.domain.User;
 import Jutjubic.RA56.domain.Video;
+import Jutjubic.RA56.dto.PremierDetailResponse;
+import Jutjubic.RA56.dto.PremiereVideoResponse;
 import Jutjubic.RA56.dto.VideoDetailResponse;
 import Jutjubic.RA56.dto.VideoMapClusterRow;
 import Jutjubic.RA56.dto.VideoMapPoint;
@@ -19,7 +21,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Value;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -56,12 +61,16 @@ public class VideoService {
                 .map(video -> {
                     String thumbnailUrl = this.baseUrl + "/api/videos/thumbnail/" + video.getThumbnailPath(); 
                     long likesCount = likeRepository.countByVideoId(video.getId());
+                    LocalDateTime scheduledAt = video.getScheduledAt() == null ? video.getCreatedAt() : video.getScheduledAt();
                     return new VideoResponse(
                             video.getId(),
                             video.getTitle(),
                             video.getDescription(),
                             video.getTags(),
                             video.getCreatedAt(),
+                            scheduledAt,
+                            resolveDurationSeconds(video),
+                            isPremiereEnabled(video),
                             video.getLatitude(),
                             video.getLongitude(),
                             video.getOwner().getUsername(),
@@ -69,6 +78,22 @@ public class VideoService {
                             likesCount
                     );
                 })
+                .collect(Collectors.toList());
+    }
+
+    public List<PremiereVideoResponse> getPremieres() {
+        LocalDateTime now = LocalDateTime.now();
+        return videoRepository.findAll(Sort.by(Sort.Direction.ASC, "scheduledAt")).stream()
+                .filter(this::isPremiereEnabled)
+                .filter(video -> !isPremiereExpired(video, now))
+                .map(video -> new PremiereVideoResponse(
+                        video.getId(),
+                        video.getTitle(),
+                        video.getDescription(),
+                        this.baseUrl + "/api/videos/thumbnail/" + video.getThumbnailPath(),
+                        video.getScheduledAt() == null ? video.getCreatedAt() : video.getScheduledAt(),
+                        resolveDurationSeconds(video)
+                ))
                 .collect(Collectors.toList());
     }
 
@@ -218,6 +243,11 @@ public class VideoService {
             throw new RuntimeException("Video not found with id: " + id);
         }
 
+        LocalDateTime now = LocalDateTime.now();
+        if (isPremiereEnabled(video) && !isPremiereExpired(video, now)) {
+            throw new IllegalStateException("Video is available only through premiere until the broadcast ends.");
+        }
+
         long currentViews = video.getViews() == null ? 0L : video.getViews();
         video.setViews(currentViews + 1);
         videoRepository.save(video);
@@ -253,10 +283,56 @@ public class VideoService {
         );
     }
 
+    @Transactional
+    public PremierDetailResponse getPremierById(Long id) {
+        Video video = videoRepository.findOneByIdForUpdate(id);
+        if (video == null) {
+            throw new RuntimeException("Video not found with id: " + id);
+        }
+
+        LocalDateTime scheduledAt = video.getScheduledAt() == null ? video.getCreatedAt() : video.getScheduledAt();
+        long durationSeconds = resolveDurationSeconds(video);
+        LocalDateTime now = LocalDateTime.now();
+
+        if (!isPremiereEnabled(video)) {
+            throw new IllegalStateException("Video is not a premiere.");
+        }
+
+        if (now.isBefore(scheduledAt)) {
+            throw new IllegalStateException("Premiere has not started yet.");
+        }
+
+        if (isPremiereExpired(video, now)) {
+            throw new IllegalStateException("Premiere has ended.");
+        }
+
+        long currentViews = video.getViews() == null ? 0L : video.getViews();
+        video.setViews(currentViews + 1);
+        videoRepository.save(video);
+
+        long streamOffsetSeconds = computeStreamOffsetSeconds(scheduledAt, now);
+        String thumbnailUrl = this.baseUrl + "/api/videos/thumbnail/" + video.getThumbnailPath();
+        String videoUrl = this.baseUrl + "/api/videos/play/" + video.getVideoPath();
+
+        return new PremierDetailResponse(
+                video.getId(),
+                video.getTitle(),
+                video.getDescription(),
+                thumbnailUrl,
+                videoUrl,
+                scheduledAt,
+                durationSeconds,
+                streamOffsetSeconds
+        );
+    }
+
     @Transactional(rollbackFor = Exception.class)
-    public VideoResponse createVideo(String title, String description, String tags, Double latitude, Double longitude, MultipartFile thumbnailFile, MultipartFile videoFile, String username) {
+    public VideoResponse createVideo(String title, String description, String tags, String scheduledAtValue, Long durationSeconds, Double latitude, Double longitude, MultipartFile thumbnailFile, MultipartFile videoFile, String username) {
         if (latitude == null || longitude == null) {
             throw new RuntimeException("Location coordinates are required.");
+        }
+        if (durationSeconds == null || durationSeconds <= 0) {
+            throw new IllegalArgumentException("Video duration must be greater than zero.");
         }
 
         User user = userRepository.findByEmailIgnoreCase(username)
@@ -268,6 +344,12 @@ public class VideoService {
         try {
             thumbnailFileName = fileStorageService.storeThumbnail(thumbnailFile);
             videoFileName = fileStorageService.storeVideo(videoFile);
+            LocalDateTime now = LocalDateTime.now();
+            boolean hasScheduledAt = scheduledAtValue != null && !scheduledAtValue.isBlank();
+            LocalDateTime scheduledAt = parseScheduledAtOrNow(scheduledAtValue, now, durationSeconds);
+            if (hasScheduledAt && scheduledAt.isBefore(now)) {
+                throw new IllegalArgumentException("Scheduled date cannot be in the past.");
+            }
 
             Video video = new Video(
                     title,
@@ -275,7 +357,10 @@ public class VideoService {
                     tags,
                     thumbnailFileName,
                     videoFileName,
-                    LocalDateTime.now(),
+                    now,
+                    scheduledAt,
+                    durationSeconds,
+                    hasScheduledAt,
                     latitude,
                     longitude,
                     user
@@ -293,6 +378,9 @@ public class VideoService {
                 savedVideo.getDescription(),
                 savedVideo.getTags(),
                 savedVideo.getCreatedAt(),
+                savedVideo.getScheduledAt(),
+                resolveDurationSeconds(savedVideo),
+                isPremiereEnabled(savedVideo),
                 savedVideo.getLatitude(),
                 savedVideo.getLongitude(),
                 savedVideo.getOwner().getUsername(),
@@ -365,6 +453,61 @@ public class VideoService {
     }
 
     public Resource getVideoStream(String fileName) {
+        videoRepository.findByVideoPath(fileName).ifPresent(video -> {
+            LocalDateTime scheduledAt = video.getScheduledAt() == null ? video.getCreatedAt() : video.getScheduledAt();
+            if (LocalDateTime.now().isBefore(scheduledAt)) {
+                throw new IllegalStateException("Video is not available before the scheduled time.");
+            }
+        });
         return fileStorageService.loadVideoAsResource(fileName);
+    }
+
+    private LocalDateTime parseScheduledAtOrNow(String scheduledAtValue, LocalDateTime now, long durationSeconds) {
+        if (scheduledAtValue == null || scheduledAtValue.isBlank()) {
+            return now.minusSeconds(Math.max(1L, durationSeconds));
+        }
+
+        try {
+            return LocalDateTime.parse(scheduledAtValue);
+        } catch (DateTimeParseException ignored) {
+            try {
+                DateTimeFormatter fallback = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+                return LocalDateTime.parse(scheduledAtValue, fallback);
+            } catch (DateTimeParseException ex) {
+                throw new IllegalArgumentException("Invalid scheduledAt format. Expected ISO date-time.");
+            }
+        }
+    }
+
+    private long resolveDurationSeconds(Video video) {
+        if (video.getDurationSeconds() == null || video.getDurationSeconds() <= 0) {
+            return 1L;
+        }
+        return video.getDurationSeconds();
+    }
+
+    private boolean isPremiereEnabled(Video video) {
+        if (!Boolean.TRUE.equals(video.getPremiereEnabled())) {
+            return false;
+        }
+        if (video.getScheduledAt() == null || video.getCreatedAt() == null) {
+            return false;
+        }
+        // Guard for legacy rows where unscheduled uploads were represented as past scheduled times.
+        return !video.getScheduledAt().isBefore(video.getCreatedAt());
+    }
+
+    private long computeStreamOffsetSeconds(LocalDateTime scheduledAt, LocalDateTime now) {
+        if (now.isBefore(scheduledAt)) {
+            return 0L;
+        }
+        return Math.max(0L, Duration.between(scheduledAt, now).getSeconds());
+    }
+
+    private boolean isPremiereExpired(Video video, LocalDateTime now) {
+        LocalDateTime scheduledAt = video.getScheduledAt() == null ? video.getCreatedAt() : video.getScheduledAt();
+        long durationSeconds = resolveDurationSeconds(video);
+        LocalDateTime endAt = scheduledAt.plusSeconds(durationSeconds);
+        return !now.isBefore(endAt);
     }
 }
