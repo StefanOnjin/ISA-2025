@@ -14,6 +14,11 @@
       <input type="text" id="tags" name="tags" [(ngModel)]="tags">
     </div>
     <div class="form-group">
+      <label for="scheduledAt">Scheduled date and time (optional)</label>
+      <input type="datetime-local" id="scheduledAt" name="scheduledAt" [(ngModel)]="scheduledAt">
+      <small>If left empty, premiere starts immediately (NOW).</small>
+    </div>
+    <div class="form-group">
       <label>Location (coordinates)</label>
       <div class="coords-row">
         <input type="text" [value]="latitude !== null ? latitude : ''" placeholder="Latitude" readonly>
@@ -31,6 +36,7 @@
     <div class="form-group">
       <label for="video">Video File (MP4, max 200MB)</label>
       <input type="file" id="video" (change)="onVideoSelected($event)" accept="video/mp4" required>
+      <small *ngIf="durationSeconds !== null">Duration: {{ durationSeconds }}s</small>
     </div>
     
     <button type="submit" [disabled]="!uploadForm.form.valid || !selectedThumbnail || !selectedVideo || latitude === null || longitude === null" class="upload-btn">

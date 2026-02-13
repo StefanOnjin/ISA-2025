@@ -32,6 +32,15 @@ public class Video {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(nullable = true)
+    private LocalDateTime scheduledAt;
+
+    @Column(nullable = true)
+    private Long durationSeconds;
+
+    @Column(nullable = true)
+    private Boolean premiereEnabled;
+
     @Column(nullable = false)
     private Double latitude;
 
@@ -45,13 +54,16 @@ public class Video {
     public Video() {
     }
 
-    public Video(String title, String description, String tags, String thumbnailPath, String videoPath, LocalDateTime createdAt, Double latitude, Double longitude, User owner) {
+    public Video(String title, String description, String tags, String thumbnailPath, String videoPath, LocalDateTime createdAt, LocalDateTime scheduledAt, Long durationSeconds, Boolean premiereEnabled, Double latitude, Double longitude, User owner) {
         this.title = title;
         this.description = description;
         this.tags = tags;
         this.thumbnailPath = thumbnailPath;
         this.videoPath = videoPath;
         this.createdAt = createdAt;
+        this.scheduledAt = scheduledAt;
+        this.durationSeconds = durationSeconds;
+        this.premiereEnabled = premiereEnabled;
         this.latitude = latitude;
         this.longitude = longitude;
         this.owner = owner;
@@ -119,6 +131,30 @@ public class Video {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getScheduledAt() {
+        return scheduledAt;
+    }
+
+    public void setScheduledAt(LocalDateTime scheduledAt) {
+        this.scheduledAt = scheduledAt;
+    }
+
+    public Long getDurationSeconds() {
+        return durationSeconds;
+    }
+
+    public void setDurationSeconds(Long durationSeconds) {
+        this.durationSeconds = durationSeconds;
+    }
+
+    public Boolean getPremiereEnabled() {
+        return premiereEnabled;
+    }
+
+    public void setPremiereEnabled(Boolean premiereEnabled) {
+        this.premiereEnabled = premiereEnabled;
     }
 
     public Double getLatitude() {

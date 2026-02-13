@@ -12,8 +12,10 @@ export class VideoUploadComponent implements OnDestroy {
   title: string = '';
   description: string = '';
   tags: string = '';
+  scheduledAt: string = '';
   latitude: number | null = null;
   longitude: number | null = null;
+  durationSeconds: number | null = null;
   
   selectedThumbnail: File | null = null;
   selectedVideo: File | null = null;
@@ -33,6 +35,19 @@ export class VideoUploadComponent implements OnDestroy {
 
   onVideoSelected(event: any): void {
     this.selectedVideo = event.target.files[0] ?? null;
+    this.durationSeconds = null;
+    if (!this.selectedVideo) {
+      return;
+    }
+
+    this.loadDurationSeconds(this.selectedVideo)
+      .then((duration) => {
+        this.durationSeconds = duration;
+      })
+      .catch(() => {
+        this.selectedVideo = null;
+        this.errorMessage = 'Cannot read video duration. Please choose a valid MP4 file.';
+      });
   }
 
   onSubmit(): void {
@@ -46,10 +61,31 @@ export class VideoUploadComponent implements OnDestroy {
       return;
     }
 
+    if (this.durationSeconds === null || this.durationSeconds <= 0) {
+      this.errorMessage = 'Cannot determine video duration.';
+      return;
+    }
+
+    if (this.scheduledAt) {
+      const scheduledDate = new Date(this.scheduledAt);
+      if (isNaN(scheduledDate.getTime())) {
+        this.errorMessage = 'Invalid scheduled date format.';
+        return;
+      }
+      if (scheduledDate.getTime() < Date.now()) {
+        this.errorMessage = 'Scheduled date cannot be in the past.';
+        return;
+      }
+    }
+
     const formData = new FormData();
     formData.append('title', this.title);
     formData.append('description', this.description);
     formData.append('tags', this.tags);
+    if (this.scheduledAt) {
+      formData.append('scheduledAt', this.scheduledAt);
+    }
+    formData.append('durationSeconds', Math.max(1, Math.floor(this.durationSeconds)).toString());
     formData.append('latitude', this.latitude.toString());
     formData.append('longitude', this.longitude.toString());
     formData.append('thumbnail', this.selectedThumbnail);
@@ -159,5 +195,32 @@ export class VideoUploadComponent implements OnDestroy {
         fillOpacity: 0.85
       }).addTo(this.map);
     }
+  }
+
+  private loadDurationSeconds(file: File): Promise<number> {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      const url = URL.createObjectURL(file);
+
+      const cleanup = () => {
+        URL.revokeObjectURL(url);
+      };
+
+      video.preload = 'metadata';
+      video.onloadedmetadata = () => {
+        const duration = video.duration;
+        cleanup();
+        if (!isFinite(duration) || duration <= 0) {
+          reject(new Error('Invalid duration'));
+          return;
+        }
+        resolve(Math.ceil(duration));
+      };
+      video.onerror = () => {
+        cleanup();
+        reject(new Error('Metadata load failed'));
+      };
+      video.src = url;
+    });
   }
 }

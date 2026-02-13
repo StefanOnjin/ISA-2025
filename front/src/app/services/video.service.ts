@@ -1,12 +1,15 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { PremierDetail } from '../models/premier-detail';
+import { PremiereVideo } from '../models/premiere-video';
 
 @Injectable({
   providedIn: 'root'
 })
 export class VideoService {
   private readonly baseUrl = 'http://localhost:8080/api/videos';
+  private readonly premierUrl = 'http://localhost:8080/api/premiers';
   private readonly tokenKey = 'ra56.jwt';
 
   constructor(private http: HttpClient) {}
@@ -48,6 +51,14 @@ export class VideoService {
     });
 
     return this.http.post(`${this.baseUrl}/upload`, formData, { headers: headers });
+  }
+
+  getPremieres(): Observable<PremiereVideo[]> {
+    return this.http.get<PremiereVideo[]>(this.premierUrl);
+  }
+
+  getPremierById(id: number): Observable<PremierDetail> {
+    return this.http.get<PremierDetail>(`${this.premierUrl}/${id}`);
   }
 
   getMapVideos(

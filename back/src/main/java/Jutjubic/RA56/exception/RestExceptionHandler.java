@@ -28,6 +28,11 @@ public class RestExceptionHandler {
 		return ResponseEntity.badRequest().body(new ErrorResponse(ex.getMessage(), null));
 	}
 
+	@ExceptionHandler(IllegalStateException.class)
+	public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException ex) {
+		return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(ex.getMessage(), null));
+	}
+
 	@ExceptionHandler(LoginRateLimitException.class)
 	public ResponseEntity<ErrorResponse> handleRateLimit(LoginRateLimitException ex) {
 		return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)

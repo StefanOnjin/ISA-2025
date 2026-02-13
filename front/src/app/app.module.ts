@@ -12,6 +12,8 @@ import { VideoListComponent } from './video/video-list/video-list.component';
 import { VideoDetailComponent } from './video/video-detail/video-detail.component';
 import { UserProfileComponent } from './profile/user-profile.component';
 import { VideoMapComponent } from './video/video-map/video-map.component';
+import { VideoPremieresComponent } from './video/video-premieres/video-premieres.component';
+import { VideoPremierComponent } from './video/video-premier/video-premier.component';
 
 @NgModule({
   declarations: [
@@ -23,7 +25,9 @@ import { VideoMapComponent } from './video/video-map/video-map.component';
     VideoListComponent,
     VideoDetailComponent,
     UserProfileComponent,
-    VideoMapComponent
+    VideoMapComponent,
+    VideoPremieresComponent,
+    VideoPremierComponent
   ],
   imports: [
     BrowserModule,
