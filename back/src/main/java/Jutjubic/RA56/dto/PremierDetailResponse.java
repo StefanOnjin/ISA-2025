@@ -8,6 +8,7 @@ public record PremierDetailResponse(
         String description,
         String thumbnailUrl,
         String videoUrl,
+        String hlsUrl,
         LocalDateTime scheduledAt,
         long durationSeconds,
         long streamOffsetSeconds

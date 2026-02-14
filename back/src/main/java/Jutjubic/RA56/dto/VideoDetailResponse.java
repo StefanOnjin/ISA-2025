@@ -14,6 +14,7 @@ public record VideoDetailResponse(
         String ownerUsername,
         String thumbnailUrl,
         String videoUrl,
+        String hlsUrl,
         long likesCount,
         boolean likedByUser
 ) {

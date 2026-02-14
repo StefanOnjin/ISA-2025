@@ -1,3 +1,6 @@
 /.metadata/
 bin/
 storage/
+back/chunk-*.m4s
+back/init-*.m4s
+back/manifest.mpd

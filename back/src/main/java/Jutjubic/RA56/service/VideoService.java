@@ -25,12 +25,15 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.core.io.UrlResource;
+import java.net.MalformedURLException;
 
 @Service
 public class VideoService {
@@ -40,6 +43,7 @@ public class VideoService {
     private final UserRepository userRepository;
     private final VideoLikeRepository likeRepository;
     private final CacheManager cacheManager;
+    private final AdaptiveStreamingService adaptiveStreamingService;
     
     @Value("${app.base-url}") 
     private String baseUrl; 
@@ -48,12 +52,14 @@ public class VideoService {
             FileStorageService fileStorageService,
             UserRepository userRepository,
             VideoLikeRepository likeRepository,
-            CacheManager cacheManager) {
+            CacheManager cacheManager,
+            AdaptiveStreamingService adaptiveStreamingService) {
         this.videoRepository = videoRepository;
         this.fileStorageService = fileStorageService;
         this.userRepository = userRepository;
         this.likeRepository = likeRepository;
         this.cacheManager = cacheManager;
+        this.adaptiveStreamingService = adaptiveStreamingService;
     }
 
     public List<VideoResponse> getAllVideos() {
@@ -255,6 +261,7 @@ public class VideoService {
         String thumbnailUrl = this.baseUrl + "/api/videos/thumbnail/" + video.getThumbnailPath();
         
         String videoUrl = this.baseUrl + "/api/videos/play/" + video.getVideoPath();
+        String hlsUrl = this.baseUrl + "/api/videos/hls/" + video.getVideoPath() + "/master.m3u8";
 
         long likesCount = likeRepository.countByVideoId(video.getId());
         boolean likedByUser = false;
@@ -278,6 +285,7 @@ public class VideoService {
                 video.getOwner().getUsername(),
                 thumbnailUrl,
                 videoUrl,
+                hlsUrl,
                 likesCount,
                 likedByUser
         );
@@ -313,6 +321,7 @@ public class VideoService {
         long streamOffsetSeconds = computeStreamOffsetSeconds(scheduledAt, now);
         String thumbnailUrl = this.baseUrl + "/api/videos/thumbnail/" + video.getThumbnailPath();
         String videoUrl = this.baseUrl + "/api/videos/play/" + video.getVideoPath();
+        String hlsUrl = this.baseUrl + "/api/videos/hls/" + video.getVideoPath() + "/master.m3u8";
 
         return new PremierDetailResponse(
                 video.getId(),
@@ -320,6 +329,7 @@ public class VideoService {
                 video.getDescription(),
                 thumbnailUrl,
                 videoUrl,
+                hlsUrl,
                 scheduledAt,
                 durationSeconds,
                 streamOffsetSeconds
@@ -344,6 +354,8 @@ public class VideoService {
         try {
             thumbnailFileName = fileStorageService.storeThumbnail(thumbnailFile);
             videoFileName = fileStorageService.storeVideo(videoFile);
+            Path sourceVideoPath = fileStorageService.resolveVideoPath(videoFileName);
+            adaptiveStreamingService.ensureAdaptiveStreamsAsync(videoFileName, sourceVideoPath);
             LocalDateTime now = LocalDateTime.now();
             boolean hasScheduledAt = scheduledAtValue != null && !scheduledAtValue.isBlank();
             LocalDateTime scheduledAt = parseScheduledAtOrNow(scheduledAtValue, now, durationSeconds);
@@ -453,13 +465,35 @@ public class VideoService {
     }
 
     public Resource getVideoStream(String fileName) {
+        ensureVideoAvailableNow(fileName);
+        return fileStorageService.loadVideoAsResource(fileName);
+    }
+
+    public Resource getHlsResource(String fileName, String resourcePath) {
+        ensureVideoAvailableNow(fileName);
+        Path resource = adaptiveStreamingService.resolveHlsResource(fileName, resourcePath);
+        return asResource(resource);
+    }
+
+    private void ensureVideoAvailableNow(String fileName) {
         videoRepository.findByVideoPath(fileName).ifPresent(video -> {
             LocalDateTime scheduledAt = video.getScheduledAt() == null ? video.getCreatedAt() : video.getScheduledAt();
             if (LocalDateTime.now().isBefore(scheduledAt)) {
                 throw new IllegalStateException("Video is not available before the scheduled time.");
             }
         });
-        return fileStorageService.loadVideoAsResource(fileName);
+    }
+
+    private Resource asResource(Path path) {
+        try {
+            Resource resource = new UrlResource(path.toUri());
+            if (!resource.exists()) {
+                throw new RuntimeException("Adaptive stream resource not found.");
+            }
+            return resource;
+        } catch (MalformedURLException ex) {
+            throw new RuntimeException("Invalid adaptive stream resource path.", ex);
+        }
     }
 
     private LocalDateTime parseScheduledAtOrNow(String scheduledAtValue, LocalDateTime now, long durationSeconds) {

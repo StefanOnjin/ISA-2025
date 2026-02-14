@@ -4,6 +4,7 @@ export interface PremierDetail {
   description: string;
   thumbnailUrl: string;
   videoUrl: string;
+  hlsUrl: string;
   scheduledAt: string;
   durationSeconds: number;
   streamOffsetSeconds: number;

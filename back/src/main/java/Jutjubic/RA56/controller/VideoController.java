@@ -58,6 +58,16 @@ public class VideoController {
                 .body(resource);
     }
 
+    @GetMapping("/hls/{fileName}/{*resourcePath}")
+    public ResponseEntity<Resource> getHlsResource(@PathVariable String fileName, @PathVariable String resourcePath) {
+        String normalizedPath = normalizeAdaptivePath(resourcePath);
+        Resource resource = videoService.getHlsResource(fileName, normalizedPath);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(resolveAdaptiveContentType(normalizedPath)))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                .body(resource);
+    }
+
     @PostMapping("/upload")
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<VideoResponse> uploadVideo(
@@ -117,5 +127,23 @@ public class VideoController {
                 .contentType(MediaType.parseMediaType(contentType))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
                 .body(resource);
+    }
+
+    private String resolveAdaptiveContentType(String path) {
+        String lower = path.toLowerCase();
+        if (lower.endsWith(".m3u8")) {
+            return "application/vnd.apple.mpegurl";
+        }
+        if (lower.endsWith(".ts")) {
+            return "video/mp2t";
+        }
+        return "application/octet-stream";
+    }
+
+    private String normalizeAdaptivePath(String resourcePath) {
+        if (resourcePath == null || resourcePath.isBlank()) {
+            throw new IllegalArgumentException("Adaptive stream resource path is required.");
+        }
+        return resourcePath.startsWith("/") ? resourcePath.substring(1) : resourcePath;
     }
 }
