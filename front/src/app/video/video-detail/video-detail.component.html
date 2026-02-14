@@ -3,9 +3,21 @@
     <div class="video-top-row">
       <div class="video-left">
         <div class="video-player-container">
-          <video #videoPlayer controls autoplay class="video-player">
-            Your browser does not support the video tag.
-          </video>
+          <ng-container *ngIf="isTranscodingReady; else transcodingState">
+            <video #videoPlayer controls autoplay class="video-player">
+              Your browser does not support the video tag.
+            </video>
+          </ng-container>
+          <ng-template #transcodingState>
+            <div class="transcoding-state">
+              <p class="transcoding-title">Transcoding video...</p>
+              <div class="progress-track">
+                <div class="progress-fill" [style.width.%]="transcodingProgress"></div>
+              </div>
+              <p class="transcoding-percent">{{ transcodingProgress }}%</p>
+              <p class="transcoding-message">{{ transcodingMessage }}</p>
+            </div>
+          </ng-template>
         </div>
       </div>
       <div class="video-info">

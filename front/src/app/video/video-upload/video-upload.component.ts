@@ -96,7 +96,7 @@ export class VideoUploadComponent implements OnDestroy {
 
     this.videoService.upload(formData).subscribe({
       next: (response) => {
-        this.successMessage = 'Video uploaded successfully! Redirecting...';
+        this.successMessage = 'Upload accepted. Transcoding is queued and will start shortly.';
         setTimeout(() => {
           this.router.navigate(['/home']);
         }, 2000);

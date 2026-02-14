@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { PremierDetail } from '../models/premier-detail';
 import { PremiereVideo } from '../models/premiere-video';
+import { TranscodingStatus } from '../models/transcoding-status';
 
 @Injectable({
   providedIn: 'root'
@@ -59,6 +60,10 @@ export class VideoService {
 
   getPremierById(id: number): Observable<PremierDetail> {
     return this.http.get<PremierDetail>(`${this.premierUrl}/${id}`);
+  }
+
+  getTranscodingStatus(id: number): Observable<TranscodingStatus> {
+    return this.http.get<TranscodingStatus>(`${this.baseUrl}/${id}/transcoding-status`);
   }
 
   getMapVideos(

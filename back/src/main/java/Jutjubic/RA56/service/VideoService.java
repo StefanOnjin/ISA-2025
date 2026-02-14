@@ -2,8 +2,12 @@ package Jutjubic.RA56.service;
 
 import Jutjubic.RA56.domain.User;
 import Jutjubic.RA56.domain.Video;
+import Jutjubic.RA56.domain.TranscodingJob;
+import Jutjubic.RA56.domain.TranscodingJobStatus;
 import Jutjubic.RA56.dto.PremierDetailResponse;
 import Jutjubic.RA56.dto.PremiereVideoResponse;
+import Jutjubic.RA56.dto.TranscodingJobMessage;
+import Jutjubic.RA56.dto.TranscodingStatusResponse;
 import Jutjubic.RA56.dto.VideoDetailResponse;
 import Jutjubic.RA56.dto.VideoMapClusterRow;
 import Jutjubic.RA56.dto.VideoMapPoint;
@@ -18,6 +22,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Value;
 
@@ -45,6 +51,8 @@ public class VideoService {
     private final VideoLikeRepository likeRepository;
     private final CacheManager cacheManager;
     private final AdaptiveStreamingService adaptiveStreamingService;
+    private final TranscodingJobService transcodingJobService;
+    private final TranscodingJobProducer transcodingJobProducer;
     
     @Value("${app.base-url}") 
     private String baseUrl; 
@@ -54,13 +62,17 @@ public class VideoService {
             UserRepository userRepository,
             VideoLikeRepository likeRepository,
             CacheManager cacheManager,
-            AdaptiveStreamingService adaptiveStreamingService) {
+            AdaptiveStreamingService adaptiveStreamingService,
+            TranscodingJobService transcodingJobService,
+            TranscodingJobProducer transcodingJobProducer) {
         this.videoRepository = videoRepository;
         this.fileStorageService = fileStorageService;
         this.userRepository = userRepository;
         this.likeRepository = likeRepository;
         this.cacheManager = cacheManager;
         this.adaptiveStreamingService = adaptiveStreamingService;
+        this.transcodingJobService = transcodingJobService;
+        this.transcodingJobProducer = transcodingJobProducer;
     }
 
     public List<VideoResponse> getAllVideos() {
@@ -355,8 +367,6 @@ public class VideoService {
         try {
             thumbnailFileName = fileStorageService.storeThumbnail(thumbnailFile);
             videoFileName = fileStorageService.storeVideo(videoFile);
-            Path sourceVideoPath = fileStorageService.resolveVideoPath(videoFileName);
-            adaptiveStreamingService.ensureAdaptiveStreamsAsync(videoFileName, sourceVideoPath);
             LocalDateTime now = LocalDateTime.now();
             boolean hasScheduledAt = scheduledAtValue != null && !scheduledAtValue.isBlank();
             LocalDateTime scheduledAt = parseScheduledAtOrNow(scheduledAtValue, now, durationSeconds);
@@ -380,6 +390,8 @@ public class VideoService {
             );
 
             Video savedVideo = videoRepository.save(video);
+            TranscodingJob job = transcodingJobService.createPendingJob(savedVideo);
+            enqueueTranscodingAfterCommit(job, savedVideo);
 
             evictVideoMapCacheFor(savedVideo);
             
@@ -483,8 +495,32 @@ public class VideoService {
             return;
         }
 
-        Path sourceVideoPath = fileStorageService.resolveVideoPath(fileName);
-        adaptiveStreamingService.ensureAdaptiveStreams(fileName, sourceVideoPath);
+        TranscodingJob job = transcodingJobService.findByVideoPath(fileName);
+        if (job == null || job.getStatus() == TranscodingJobStatus.PENDING || job.getStatus() == TranscodingJobStatus.PROCESSING) {
+            throw new IllegalStateException("Video transcoding is still in progress.");
+        }
+        if (job.getStatus() == TranscodingJobStatus.FAILED) {
+            throw new IllegalStateException("Video transcoding failed.");
+        }
+        throw new RuntimeException("Adaptive stream resource not found.");
+    }
+
+    @Transactional(readOnly = true)
+    public TranscodingStatusResponse getTranscodingStatus(Long videoId) {
+        TranscodingStatusResponse response = transcodingJobService.getVideoStatus(videoId);
+        if (!"NOT_FOUND".equals(response.status())) {
+            return response;
+        }
+
+        return videoRepository.findById(videoId)
+                .map(video -> {
+                    Path manifest = adaptiveStreamingService.getHlsManifestPath(video.getVideoPath());
+                    if (Files.exists(manifest)) {
+                        return new TranscodingStatusResponse(videoId, "COMPLETED", 100, true, "Transcoding completed.");
+                    }
+                    return new TranscodingStatusResponse(videoId, "PENDING", 0, false, "Queued for transcoding.");
+                })
+                .orElse(response);
     }
 
     private void ensureVideoAvailableNow(String fileName) {
@@ -523,6 +559,27 @@ public class VideoService {
                 throw new IllegalArgumentException("Invalid scheduledAt format. Expected ISO date-time.");
             }
         }
+    }
+
+    private void enqueueTranscodingAfterCommit(TranscodingJob job, Video video) {
+        TranscodingJobMessage message = new TranscodingJobMessage(
+                job.getId(),
+                video.getId(),
+                video.getVideoPath(),
+                resolveDurationSeconds(video)
+        );
+
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            transcodingJobProducer.publish(message);
+            return;
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                transcodingJobProducer.publish(message);
+            }
+        });
     }
 
     private long resolveDurationSeconds(Video video) {

@@ -5,6 +5,7 @@ import { Comment } from '../../models/comment';
 import { CommentPage } from '../../models/comment-page';
 import { CommentService } from '../../services/comment.service';
 import { VideoService } from '../../services/video.service';
+import { TranscodingStatus } from '../../models/transcoding-status';
 
 declare global {
   interface Window {
@@ -39,6 +40,11 @@ export class VideoDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   likeError: string | null = null;
   private hlsInstance: any = null;
   private viewReady = false;
+  transcodingStatus: TranscodingStatus | null = null;
+  transcodingProgress = 0;
+  transcodingMessage = 'Preparing transcoding...';
+  isTranscodingReady = false;
+  private transcodingPollId: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -56,6 +62,7 @@ export class VideoDetailComponent implements OnInit, AfterViewInit, OnDestroy {
           this.video = data;
           this.likesCount = data.likesCount ?? 0;
           this.likedByUser = !!data.likedByUser;
+          this.startTranscodingPolling();
         },
         error: (error) => {
           this.errorMessage = `Failed to load video: ${error.message}`;
@@ -73,6 +80,7 @@ export class VideoDetailComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.destroyPlayers();
+    this.stopTranscodingPolling();
   }
 
   loadComments(page: number): void {
@@ -178,22 +186,22 @@ export class VideoDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private setupAdaptivePlayback(): void {
-    if (!this.viewReady || !this.video || !this.playerRef) {
+    if (!this.viewReady || !this.video || !this.playerRef || !this.isTranscodingReady) {
       return;
     }
 
     const player = this.playerRef.nativeElement;
     const hlsUrl = this.video?.hlsUrl as string | undefined;
-    const fallbackMp4Url = this.video?.videoUrl as string | undefined;
 
     this.destroyPlayers();
 
     if (hlsUrl) {
-      this.attachHls(player, hlsUrl, () => this.attachNative(player, fallbackMp4Url));
+      this.attachHls(player, hlsUrl, () => {
+        this.errorMessage = 'Adaptive stream is not available yet. Refresh in a few seconds.';
+      });
       return;
     }
-
-    this.attachNative(player, fallbackMp4Url);
+    this.errorMessage = 'Adaptive stream URL is missing.';
   }
 
   private attachHls(player: HTMLVideoElement, hlsUrl: string, onFail: () => void): void {
@@ -237,14 +245,6 @@ export class VideoDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     this.loadScript('https://cdn.jsdelivr.net/npm/hls.js@1').then(init).catch(failOver);
   }
 
-  private attachNative(player: HTMLVideoElement, src?: string): void {
-    if (!src) {
-      return;
-    }
-    player.src = src;
-    player.load();
-  }
-
   private destroyPlayers(): void {
     if (this.hlsInstance) {
       this.hlsInstance.destroy();
@@ -275,5 +275,48 @@ export class VideoDetailComponent implements OnInit, AfterViewInit, OnDestroy {
       script.addEventListener('error', () => reject(new Error(`Failed to load script: ${src}`)), { once: true });
       document.body.appendChild(script);
     });
+  }
+
+  private startTranscodingPolling(): void {
+    if (!this.videoId) {
+      return;
+    }
+
+    this.stopTranscodingPolling();
+
+    const load = () => {
+      this.videoService.getTranscodingStatus(this.videoId as number).subscribe({
+        next: (status) => {
+          this.transcodingStatus = status;
+          this.transcodingProgress = Math.max(0, Math.min(100, status.progress ?? 0));
+          this.transcodingMessage = status.message ?? 'Transcoding in progress.';
+          this.isTranscodingReady = status.ready;
+
+          if (status.ready) {
+            this.stopTranscodingPolling();
+            this.setupAdaptivePlayback();
+            return;
+          }
+
+          if (status.status === 'FAILED') {
+            this.stopTranscodingPolling();
+            this.errorMessage = status.message || 'Transcoding failed.';
+          }
+        },
+        error: () => {
+          this.transcodingMessage = 'Unable to load transcoding status.';
+        }
+      });
+    };
+
+    load();
+    this.transcodingPollId = setInterval(load, 2000);
+  }
+
+  private stopTranscodingPolling(): void {
+    if (this.transcodingPollId) {
+      clearInterval(this.transcodingPollId);
+      this.transcodingPollId = null;
+    }
   }
 }

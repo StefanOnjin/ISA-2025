@@ -1,6 +1,7 @@
 package Jutjubic.RA56.controller;
 
 import Jutjubic.RA56.dto.VideoResponse;
+import Jutjubic.RA56.dto.TranscodingStatusResponse;
 import Jutjubic.RA56.dto.LikeResponse;
 import Jutjubic.RA56.service.LikeService;
 import Jutjubic.RA56.service.VideoService;
@@ -44,6 +45,11 @@ public class VideoController {
         String userEmail = principal != null ? principal.getName() : null;
         VideoDetailResponse video = videoService.getVideoById(id, userEmail);
         return ResponseEntity.ok(video);
+    }
+
+    @GetMapping("/{id:\\d+}/transcoding-status")
+    public ResponseEntity<TranscodingStatusResponse> getTranscodingStatus(@PathVariable Long id) {
+        return ResponseEntity.ok(videoService.getTranscodingStatus(id));
     }
 
     @GetMapping("/play/{fileName:.+}")
@@ -94,7 +100,7 @@ public class VideoController {
                 video,
                 principal.getName()
         );
-        return ResponseEntity.ok(videoResponse);
+        return ResponseEntity.accepted().body(videoResponse);
     }
 
     @PostMapping("/{id}/like")
