@@ -117,4 +117,12 @@ public class FileStorageService {
             throw new RuntimeException("File not found " + fileName, ex);
         }
     }
+
+    public Path resolveVideoPath(String fileName) {
+        Path filePath = this.videoStorageLocation.resolve(fileName).normalize();
+        if (!filePath.startsWith(this.videoStorageLocation)) {
+            throw new IllegalArgumentException("Invalid video path");
+        }
+        return filePath;
+    }
 }
