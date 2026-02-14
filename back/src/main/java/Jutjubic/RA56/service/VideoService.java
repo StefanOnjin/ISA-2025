@@ -25,6 +25,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
@@ -471,8 +472,19 @@ public class VideoService {
 
     public Resource getHlsResource(String fileName, String resourcePath) {
         ensureVideoAvailableNow(fileName);
+        ensureAdaptiveResourceReady(fileName, resourcePath);
         Path resource = adaptiveStreamingService.resolveHlsResource(fileName, resourcePath);
         return asResource(resource);
+    }
+
+    private void ensureAdaptiveResourceReady(String fileName, String resourcePath) {
+        Path requestedResource = adaptiveStreamingService.resolveHlsResource(fileName, resourcePath);
+        if (Files.exists(requestedResource)) {
+            return;
+        }
+
+        Path sourceVideoPath = fileStorageService.resolveVideoPath(fileName);
+        adaptiveStreamingService.ensureAdaptiveStreams(fileName, sourceVideoPath);
     }
 
     private void ensureVideoAvailableNow(String fileName) {

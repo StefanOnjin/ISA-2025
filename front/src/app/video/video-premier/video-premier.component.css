@@ -1,6 +1,6 @@
 .page-container {
   display: flex;
-  max-width: 1100px;
+  max-width: 1240px;
   margin: 4px auto;
   padding: 8px 16px 20px;
 }
@@ -35,10 +35,20 @@
   font-weight: 700;
 }
 
+.stream-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2.3fr) minmax(320px, 1fr);
+  gap: 16px;
+  margin-top: 10px;
+}
+
+.stream-video-column {
+  min-width: 0;
+}
+
 .video-center-wrap {
   display: flex;
   justify-content: center;
-  margin-top: 12px;
 }
 
 .video-player-container {
@@ -79,6 +89,123 @@
   font-weight: 600;
 }
 
+.chat-panel {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.chat-panel.disabled {
+  opacity: 0.8;
+}
+
+.chat-title {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+}
+
+.chat-status {
+  margin: 0 0 10px;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.chat-status.connected {
+  color: #0f766e;
+}
+
+.chat-messages {
+  flex: 1 1 auto;
+  min-height: 220px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 8px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+}
+
+.chat-message {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.chat-time {
+  color: #6b7280;
+  font-family: monospace;
+  flex: 0 0 auto;
+}
+
+.chat-user {
+  color: #0f172a;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+
+.chat-user.system {
+  color: #0f766e;
+}
+
+.chat-text {
+  color: #1f2937;
+}
+
+.chat-empty {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.chat-hint {
+  margin: 10px 0 0;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.chat-input-row {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.chat-input-row input {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.95rem;
+}
+
+.chat-input-row button {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #0f766e;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.chat-input-row button:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+.chat-error {
+  margin: 8px 0 0;
+  color: #dc2626;
+  font-size: 0.9rem;
+}
+
 hr {
   border: 0;
   height: 1px;
@@ -108,4 +235,14 @@ hr {
 
 .error {
   color: #dc2626;
+}
+
+@media (max-width: 1000px) {
+  .stream-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .chat-messages {
+    max-height: 300px;
+  }
 }

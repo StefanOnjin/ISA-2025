@@ -54,7 +54,7 @@ public class SecurityConfig {
 					.requestMatchers(HttpMethod.HEAD, "/api/premiers").permitAll()
 					.requestMatchers(HttpMethod.GET, "/api/users/**").permitAll()
 					.requestMatchers(HttpMethod.HEAD, "/api/users/**").permitAll()
-					.requestMatchers("/auth/**", "/h2-console/**", "/error").permitAll()
+					.requestMatchers("/auth/**", "/h2-console/**", "/error", "/ws/**").permitAll()
 					.anyRequest().authenticated());
 
 		http.formLogin(form -> form.disable());
@@ -89,3 +89,4 @@ public class SecurityConfig {
 		return source;
 	}
 }
+

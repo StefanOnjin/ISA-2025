@@ -1,6 +1,10 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { PremierDetail } from '../../models/premier-detail';
+import { ChatMessage } from '../../models/chat-message';
+import { AuthService } from '../../services/auth.service';
+import { PremierChatService } from '../../services/premier-chat.service';
 import { VideoService } from '../../services/video.service';
 
 declare global {
@@ -26,30 +30,55 @@ export class VideoPremierComponent implements OnInit, AfterViewInit, OnDestroy {
   errorMessage: string | null = null;
   isLive = false;
   startsInLabel = '';
+
+  chatMessages: ChatMessage[] = [];
+  chatInput = '';
+  chatError: string | null = null;
+  isChatConnected = false;
+
   private maxReachedTime = 0;
   private initialOffset = 0;
   private syncTimer: number | null = null;
   private hlsInstance: any = null;
   private viewReady = false;
+  private messageSub?: Subscription;
+  private chatConnectedSub?: Subscription;
+  private chatErrorSub?: Subscription;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private videoService: VideoService
+    private videoService: VideoService,
+    public authService: AuthService,
+    private premierChatService: PremierChatService
   ) {}
 
   ngOnInit(): void {
+    this.messageSub = this.premierChatService.messages$.subscribe((message) => {
+      this.chatMessages = [...this.chatMessages, message].slice(-200);
+    });
+
+    this.chatConnectedSub = this.premierChatService.connected$.subscribe((connected) => {
+      this.isChatConnected = connected;
+    });
+
+    this.chatErrorSub = this.premierChatService.errors$.subscribe((error) => {
+      this.chatError = error;
+    });
+
     const idParam = this.route.snapshot.paramMap.get('id');
     if (!idParam) {
       this.errorMessage = 'Premier id is missing.';
       return;
     }
+
     const id = Number(idParam);
     this.videoService.getPremierById(id).subscribe({
       next: (data) => {
         this.premier = data;
         this.initialOffset = data.streamOffsetSeconds ?? 0;
         this.refreshLiveState();
+        this.syncChatConnection();
         this.startSyncLoop();
         this.setupAdaptivePlayback();
       },
@@ -69,6 +98,12 @@ export class VideoPremierComponent implements OnInit, AfterViewInit, OnDestroy {
       window.clearInterval(this.syncTimer);
       this.syncTimer = null;
     }
+
+    this.messageSub?.unsubscribe();
+    this.chatConnectedSub?.unsubscribe();
+    this.chatErrorSub?.unsubscribe();
+
+    this.premierChatService.disconnect();
     this.destroyPlayers();
   }
 
@@ -77,10 +112,12 @@ export class VideoPremierComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!player || !this.premier) {
       return;
     }
+
     const duration = player.duration;
     if (!isFinite(duration) || duration <= 0) {
       return;
     }
+
     const target = Math.max(0, Math.min(this.getExpectedOffsetSeconds(), Math.max(0, duration - 0.5)));
     player.currentTime = target;
     this.maxReachedTime = target;
@@ -108,8 +145,38 @@ export class VideoPremierComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!player) {
       return;
     }
+
     if (player.currentTime < this.maxReachedTime - 0.8) {
       player.currentTime = this.maxReachedTime;
+    }
+  }
+
+  sendChatMessage(): void {
+    if (!this.premier || !this.isLive) {
+      return;
+    }
+
+    if (!this.authService.isAuthenticated()) {
+      this.chatError = 'Sign in to send chat messages.';
+      return;
+    }
+
+    const text = this.chatInput.trim();
+    if (!text) {
+      return;
+    }
+
+    if (text.length > 500) {
+      this.chatError = 'Message cannot exceed 500 characters.';
+      return;
+    }
+
+    try {
+      this.premierChatService.send(this.premier.id, text);
+      this.chatInput = '';
+      this.chatError = null;
+    } catch (error) {
+      this.chatError = error instanceof Error ? error.message : 'Unable to send message.';
     }
   }
 
@@ -124,7 +191,9 @@ export class VideoPremierComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.syncTimer = window.setInterval(() => {
       this.refreshLiveState();
+      this.syncChatConnection();
       this.setupAdaptivePlayback();
+
       const player = this.playerRef?.nativeElement;
       if (!player || !this.isLive) {
         return;
@@ -139,6 +208,20 @@ export class VideoPremierComponent implements OnInit, AfterViewInit, OnDestroy {
         void player.play().catch(() => {});
       }
     }, 1000);
+  }
+
+  private syncChatConnection(): void {
+    if (!this.premier) {
+      this.premierChatService.disconnect();
+      return;
+    }
+
+    if (!this.isLive) {
+      this.premierChatService.disconnect();
+      return;
+    }
+
+    this.premierChatService.connect(this.premier.id, this.authService.getToken());
   }
 
   private setupAdaptivePlayback(): void {
@@ -237,10 +320,14 @@ export class VideoPremierComponent implements OnInit, AfterViewInit, OnDestroy {
       const script = document.createElement('script');
       script.src = src;
       script.async = true;
-      script.addEventListener('load', () => {
-        script.setAttribute('data-loaded', 'true');
-        resolve();
-      }, { once: true });
+      script.addEventListener(
+        'load',
+        () => {
+          script.setAttribute('data-loaded', 'true');
+          resolve();
+        },
+        { once: true }
+      );
       script.addEventListener('error', () => reject(new Error(`Failed to load script: ${src}`)), { once: true });
       document.body.appendChild(script);
     });
@@ -264,6 +351,7 @@ export class VideoPremierComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!this.premier) {
       return 0;
     }
+
     const scheduledTimestamp = new Date(this.premier.scheduledAt).getTime();
     const now = Date.now();
     const expected = Math.floor((now - scheduledTimestamp) / 1000);
@@ -274,10 +362,12 @@ export class VideoPremierComponent implements OnInit, AfterViewInit, OnDestroy {
     if (startsInMs <= 0) {
       return 'Premiere is live';
     }
+
     const totalSeconds = Math.ceil(startsInMs / 1000);
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
+
     if (hours > 0) {
       return `Starts in ${hours}h ${minutes}m`;
     }

@@ -10,28 +10,69 @@
       <span class="status-text">{{ startsInLabel }}</span>
     </div>
 
-    <div class="video-center-wrap">
-      <div class="video-player-container" *ngIf="isLive; else waitingTpl">
-        <video
-          #premierPlayer
-          class="video-player"
-          controls
-          autoplay
-          (loadedmetadata)="onMetadataLoaded()"
-          (timeupdate)="onTimeUpdate()"
-          (seeking)="onSeeking()">
-          Your browser does not support the video tag.
-        </video>
-      </div>
-      <ng-template #waitingTpl>
-        <div class="video-player-container waiting">
-          <img [src]="premier.thumbnailUrl" [alt]="premier.title" class="waiting-thumb" />
+    <div class="stream-layout">
+      <div class="stream-video-column">
+        <div class="video-center-wrap">
+          <div class="video-player-container" *ngIf="isLive; else waitingTpl">
+            <video
+              #premierPlayer
+              class="video-player"
+              controls
+              autoplay
+              (loadedmetadata)="onMetadataLoaded()"
+              (timeupdate)="onTimeUpdate()"
+              (seeking)="onSeeking()">
+              Your browser does not support the video tag.
+            </video>
+          </div>
+          <ng-template #waitingTpl>
+            <div class="video-player-container waiting">
+              <img [src]="premier.thumbnailUrl" [alt]="premier.title" class="waiting-thumb" />
+            </div>
+          </ng-template>
         </div>
+
+        <p class="note" *ngIf="isLive">Premiere is live. Seeking backward is disabled.</p>
+        <p class="note" *ngIf="!isLive">The broadcast has not started yet. This page will switch to live automatically.</p>
+      </div>
+
+      <aside class="chat-panel" *ngIf="isLive; else chatUnavailableTpl">
+        <h3 class="chat-title">Live chat</h3>
+        <p class="chat-status" [class.connected]="isChatConnected">
+          {{ isChatConnected ? 'Connected' : 'Connecting...' }}
+        </p>
+
+        <div class="chat-messages">
+          <div class="chat-message" *ngFor="let message of chatMessages">
+            <span class="chat-time">{{ message.sentAt | date: 'HH:mm:ss' }}</span>
+            <span class="chat-user" [class.system]="message.type === 'SYSTEM'">{{ message.senderUsername }}</span>
+            <span class="chat-text">{{ message.text }}</span>
+          </div>
+          <p class="chat-empty" *ngIf="chatMessages.length === 0">No messages yet.</p>
+        </div>
+
+        <p *ngIf="!authService.isAuthenticated()" class="chat-hint">Sign in to send messages.</p>
+
+        <div class="chat-input-row">
+          <input
+            type="text"
+            maxlength="500"
+            placeholder="Write a message..."
+            [(ngModel)]="chatInput"
+            [disabled]="!authService.isAuthenticated()"
+            (keydown.enter)="sendChatMessage()" />
+          <button type="button" (click)="sendChatMessage()" [disabled]="!authService.isAuthenticated()">Send</button>
+        </div>
+        <p *ngIf="chatError" class="chat-error">{{ chatError }}</p>
+      </aside>
+
+      <ng-template #chatUnavailableTpl>
+        <aside class="chat-panel disabled">
+          <h3 class="chat-title">Live chat</h3>
+          <p class="chat-hint">Chat will be available when the premiere starts.</p>
+        </aside>
       </ng-template>
     </div>
-
-    <p class="note" *ngIf="isLive">Premiere is live. Seeking backward is disabled.</p>
-    <p class="note" *ngIf="!isLive">The broadcast has not started yet. This page will switch to live automatically.</p>
 
     <hr />
     <p class="description">{{ premier.description }}</p>
