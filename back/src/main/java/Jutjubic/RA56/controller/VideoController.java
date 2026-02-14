@@ -68,16 +68,6 @@ public class VideoController {
                 .body(resource);
     }
 
-    @GetMapping("/dash/{fileName}/{*resourcePath}")
-    public ResponseEntity<Resource> getDashResource(@PathVariable String fileName, @PathVariable String resourcePath) {
-        String normalizedPath = normalizeAdaptivePath(resourcePath);
-        Resource resource = videoService.getDashResource(fileName, normalizedPath);
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(resolveAdaptiveContentType(normalizedPath)))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
-                .body(resource);
-    }
-
     @PostMapping("/upload")
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<VideoResponse> uploadVideo(
@@ -146,12 +136,6 @@ public class VideoController {
         }
         if (lower.endsWith(".ts")) {
             return "video/mp2t";
-        }
-        if (lower.endsWith(".mpd")) {
-            return "application/dash+xml";
-        }
-        if (lower.endsWith(".m4s")) {
-            return "video/iso.segment";
         }
         return "application/octet-stream";
     }

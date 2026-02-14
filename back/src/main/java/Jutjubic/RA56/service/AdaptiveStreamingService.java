@@ -33,27 +33,20 @@ public class AdaptiveStreamingService {
 
 	public void ensureAdaptiveStreams(String videoFileName, Path sourceVideoPath) {
 		Path hlsDir = getHlsDirectory(videoFileName);
-		Path dashDir = getDashDirectory(videoFileName);
 		Path hlsManifest = getHlsManifestPath(videoFileName);
-		Path dashManifest = getDashManifestPath(videoFileName);
 		boolean hlsReady = Files.exists(hlsManifest) && hasHlsSegments(hlsDir);
-		boolean dashReady = Files.exists(dashManifest) && hasDashSegments(dashDir);
-		if (hlsReady && dashReady) {
+		if (hlsReady) {
 			return;
 		}
 
 		try {
 			Files.createDirectories(hlsDir);
-			Files.createDirectories(dashDir);
 		} catch (IOException ex) {
 			throw new RuntimeException("Failed creating adaptive stream directories for video: " + videoFileName, ex);
 		}
 
 		if (!hlsReady) {
 			runCommand(buildHlsCommand(sourceVideoPath, hlsManifest), hlsManifest.getParent());
-		}
-		if (!dashReady) {
-			runCommand(buildDashCommand(sourceVideoPath, dashManifest), dashManifest.getParent());
 		}
 	}
 
@@ -70,16 +63,8 @@ public class AdaptiveStreamingService {
 		return resolveResource(getHlsDirectory(videoFileName), resourcePath);
 	}
 
-	public Path resolveDashResource(String videoFileName, String resourcePath) {
-		return resolveResource(getDashDirectory(videoFileName), resourcePath);
-	}
-
 	public Path getHlsManifestPath(String videoFileName) {
 		return getHlsDirectory(videoFileName).resolve("master.m3u8");
-	}
-
-	public Path getDashManifestPath(String videoFileName) {
-		return getDashDirectory(videoFileName).resolve("manifest.mpd");
 	}
 
 	private Path getVideoDir(String videoFileName) {
@@ -88,10 +73,6 @@ public class AdaptiveStreamingService {
 
 	private Path getHlsDirectory(String videoFileName) {
 		return getVideoDir(videoFileName).resolve("hls").normalize();
-	}
-
-	private Path getDashDirectory(String videoFileName) {
-		return getVideoDir(videoFileName).resolve("dash").normalize();
 	}
 
 	private Path resolveResource(Path root, String relativePath) {
@@ -110,13 +91,6 @@ public class AdaptiveStreamingService {
 		}
 	}
 
-	private boolean hasDashSegments(Path dashDir) {
-		try (DirectoryStream<Path> stream = Files.newDirectoryStream(dashDir, "*.m4s")) {
-			return stream.iterator().hasNext();
-		} catch (IOException ex) {
-			return false;
-		}
-	}
 
 	private List<String> buildHlsCommand(Path inputPath, Path manifestPath) {
 		Path hlsDir = manifestPath.getParent();
@@ -144,36 +118,6 @@ public class AdaptiveStreamingService {
 		command.add("-hls_segment_filename");
 		command.add(hlsDir.resolve("segment_%03d.ts").toString());
 		command.add(manifestPath.toString());
-		return command;
-	}
-
-	private List<String> buildDashCommand(Path inputPath, Path manifestPath) {
-		List<String> command = new ArrayList<>();
-		command.add(ffmpegBinary);
-		command.add("-y");
-		command.add("-i");
-		command.add(inputPath.toString());
-		command.add("-map");
-		command.add("0:v:0");
-		command.add("-map");
-		command.add("0:a?");
-		command.add("-c:v");
-		command.add("libx264");
-		command.add("-c:a");
-		command.add("aac");
-		command.add("-f");
-		command.add("dash");
-		command.add("-seg_duration");
-		command.add("4");
-		command.add("-use_timeline");
-		command.add("1");
-		command.add("-use_template");
-		command.add("1");
-		command.add("-init_seg_name");
-		command.add("init-$RepresentationID$.m4s");
-		command.add("-media_seg_name");
-		command.add("chunk-$RepresentationID$-$Number%05d$.m4s");
-		command.add(manifestPath.getFileName().toString());
 		return command;
 	}
 

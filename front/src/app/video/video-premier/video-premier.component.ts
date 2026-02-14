@@ -6,7 +6,6 @@ import { VideoService } from '../../services/video.service';
 declare global {
   interface Window {
     Hls?: any;
-    dashjs?: any;
   }
 }
 
@@ -31,7 +30,6 @@ export class VideoPremierComponent implements OnInit, AfterViewInit, OnDestroy {
   private initialOffset = 0;
   private syncTimer: number | null = null;
   private hlsInstance: any = null;
-  private dashInstance: any = null;
   private viewReady = false;
 
   constructor(
@@ -150,7 +148,6 @@ export class VideoPremierComponent implements OnInit, AfterViewInit, OnDestroy {
 
     const player = this.playerRef.nativeElement;
     const hlsUrl = this.premier.hlsUrl;
-    const dashUrl = this.premier.dashUrl;
     const fallbackMp4Url = this.premier.videoUrl;
     const currentSrc = player.currentSrc || player.src;
 
@@ -161,18 +158,10 @@ export class VideoPremierComponent implements OnInit, AfterViewInit, OnDestroy {
     this.destroyPlayers();
 
     if (hlsUrl) {
-      this.attachHls(player, hlsUrl, () => this.attachDashOrFallback(player, dashUrl, fallbackMp4Url));
+      this.attachHls(player, hlsUrl, () => this.attachNative(player, fallbackMp4Url));
       return;
     }
 
-    this.attachDashOrFallback(player, dashUrl, fallbackMp4Url);
-  }
-
-  private attachDashOrFallback(player: HTMLVideoElement, dashUrl?: string, fallbackMp4Url?: string): void {
-    if (dashUrl) {
-      this.attachDash(player, dashUrl, () => this.attachNative(player, fallbackMp4Url));
-      return;
-    }
     this.attachNative(player, fallbackMp4Url);
   }
 
@@ -217,39 +206,6 @@ export class VideoPremierComponent implements OnInit, AfterViewInit, OnDestroy {
     this.loadScript('https://cdn.jsdelivr.net/npm/hls.js@1').then(init).catch(failOver);
   }
 
-  private attachDash(player: HTMLVideoElement, dashUrl: string, onFail: () => void): void {
-    let failedOver = false;
-    const failOver = () => {
-      if (failedOver) {
-        return;
-      }
-      failedOver = true;
-      onFail();
-    };
-
-    const init = () => {
-      if (!window.dashjs?.MediaPlayer) {
-        failOver();
-        return;
-      }
-      const dashPlayer = window.dashjs.MediaPlayer().create();
-      dashPlayer.on('error', () => {
-        dashPlayer.reset();
-        this.dashInstance = null;
-        failOver();
-      });
-      dashPlayer.initialize(player, dashUrl, true);
-      this.dashInstance = dashPlayer;
-    };
-
-    if (window.dashjs) {
-      init();
-      return;
-    }
-
-    this.loadScript('https://cdn.jsdelivr.net/npm/dashjs@4/dist/dash.all.min.js').then(init).catch(failOver);
-  }
-
   private attachNative(player: HTMLVideoElement, src?: string): void {
     if (!src) {
       return;
@@ -262,10 +218,6 @@ export class VideoPremierComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.hlsInstance) {
       this.hlsInstance.destroy();
       this.hlsInstance = null;
-    }
-    if (this.dashInstance) {
-      this.dashInstance.reset();
-      this.dashInstance = null;
     }
   }
 

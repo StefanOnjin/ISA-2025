@@ -262,7 +262,6 @@ public class VideoService {
         
         String videoUrl = this.baseUrl + "/api/videos/play/" + video.getVideoPath();
         String hlsUrl = this.baseUrl + "/api/videos/hls/" + video.getVideoPath() + "/master.m3u8";
-        String dashUrl = this.baseUrl + "/api/videos/dash/" + video.getVideoPath() + "/manifest.mpd";
 
         long likesCount = likeRepository.countByVideoId(video.getId());
         boolean likedByUser = false;
@@ -287,7 +286,6 @@ public class VideoService {
                 thumbnailUrl,
                 videoUrl,
                 hlsUrl,
-                dashUrl,
                 likesCount,
                 likedByUser
         );
@@ -324,7 +322,6 @@ public class VideoService {
         String thumbnailUrl = this.baseUrl + "/api/videos/thumbnail/" + video.getThumbnailPath();
         String videoUrl = this.baseUrl + "/api/videos/play/" + video.getVideoPath();
         String hlsUrl = this.baseUrl + "/api/videos/hls/" + video.getVideoPath() + "/master.m3u8";
-        String dashUrl = this.baseUrl + "/api/videos/dash/" + video.getVideoPath() + "/manifest.mpd";
 
         return new PremierDetailResponse(
                 video.getId(),
@@ -333,7 +330,6 @@ public class VideoService {
                 thumbnailUrl,
                 videoUrl,
                 hlsUrl,
-                dashUrl,
                 scheduledAt,
                 durationSeconds,
                 streamOffsetSeconds
@@ -476,12 +472,6 @@ public class VideoService {
     public Resource getHlsResource(String fileName, String resourcePath) {
         ensureVideoAvailableNow(fileName);
         Path resource = adaptiveStreamingService.resolveHlsResource(fileName, resourcePath);
-        return asResource(resource);
-    }
-
-    public Resource getDashResource(String fileName, String resourcePath) {
-        ensureVideoAvailableNow(fileName);
-        Path resource = adaptiveStreamingService.resolveDashResource(fileName, resourcePath);
         return asResource(resource);
     }
 
