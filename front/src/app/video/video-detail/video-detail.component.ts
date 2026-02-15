@@ -1,11 +1,14 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { Comment } from '../../models/comment';
 import { CommentPage } from '../../models/comment-page';
 import { CommentService } from '../../services/comment.service';
 import { VideoService } from '../../services/video.service';
 import { TranscodingStatus } from '../../models/transcoding-status';
+import { WatchPartyRoom } from '../../models/watch-party-room';
+import { WatchPartyService } from '../../services/watch-party.service';
 
 declare global {
   interface Window {
@@ -44,33 +47,49 @@ export class VideoDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   transcodingProgress = 0;
   transcodingMessage = 'Preparing transcoding...';
   isTranscodingReady = false;
+  watchPartyRoom: WatchPartyRoom | null = null;
+  watchPartyConnected = false;
+  watchPartyError: string | null = null;
+  watchPartyStatus: string | null = null;
   private transcodingPollId: ReturnType<typeof setInterval> | null = null;
+  private routeSub?: Subscription;
+  private watchPartyRoomSub?: Subscription;
+  private watchPartyConnectedSub?: Subscription;
+  private watchPartyErrorSub?: Subscription;
 
   constructor(
     private route: ActivatedRoute,
     public authService: AuthService,
     private commentService: CommentService,
-    private videoService: VideoService
+    private videoService: VideoService,
+    private watchPartyService: WatchPartyService
   ) { }
 
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('id');
-    if (id) {
-      this.videoId = +id;
-      this.videoService.getVideoById(+id).subscribe({
-        next: (data) => {
-          this.video = data;
-          this.likesCount = data.likesCount ?? 0;
-          this.likedByUser = !!data.likedByUser;
-          this.startTranscodingPolling();
-        },
-        error: (error) => {
-          this.errorMessage = `Failed to load video: ${error.message}`;
-          console.error(error);
-        }
-      });
-      this.loadComments(0);
-    }
+    this.watchPartyRoomSub = this.watchPartyService.activeRoom$.subscribe((room) => {
+      this.watchPartyRoom = room;
+    });
+    this.watchPartyConnectedSub = this.watchPartyService.connected$.subscribe((connected) => {
+      this.watchPartyConnected = connected;
+    });
+    this.watchPartyErrorSub = this.watchPartyService.errors$.subscribe((error) => {
+      this.watchPartyError = error;
+    });
+
+    this.routeSub = this.route.paramMap.subscribe((params) => {
+      const id = params.get('id');
+      if (!id) {
+        return;
+      }
+
+      const parsedId = Number(id);
+      if (!Number.isFinite(parsedId) || parsedId <= 0) {
+        this.errorMessage = 'Invalid video id.';
+        return;
+      }
+
+      this.loadVideo(parsedId);
+    });
   }
 
   ngAfterViewInit(): void {
@@ -81,6 +100,10 @@ export class VideoDetailComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroyPlayers();
     this.stopTranscodingPolling();
+    this.routeSub?.unsubscribe();
+    this.watchPartyRoomSub?.unsubscribe();
+    this.watchPartyConnectedSub?.unsubscribe();
+    this.watchPartyErrorSub?.unsubscribe();
   }
 
   loadComments(page: number): void {
@@ -204,6 +227,22 @@ export class VideoDetailComponent implements OnInit, AfterViewInit, OnDestroy {
     this.errorMessage = 'Adaptive stream URL is missing.';
   }
 
+  syncWatchPartyVideo(): void {
+    this.watchPartyStatus = null;
+    this.watchPartyError = null;
+    if (!this.videoId || !this.watchPartyRoom?.owner) {
+      this.watchPartyError = 'Only room owner can sync video.';
+      return;
+    }
+
+    try {
+      this.watchPartyService.publishVideoSelected(this.videoId);
+      this.watchPartyStatus = `Synced video to room ${this.watchPartyRoom.roomCode}.`;
+    } catch (error) {
+      this.watchPartyError = error instanceof Error ? error.message : 'Failed to sync watch party video.';
+    }
+  }
+
   private attachHls(player: HTMLVideoElement, hlsUrl: string, onFail: () => void): void {
     let failedOver = false;
     const failOver = () => {
@@ -318,5 +357,41 @@ export class VideoDetailComponent implements OnInit, AfterViewInit, OnDestroy {
       clearInterval(this.transcodingPollId);
       this.transcodingPollId = null;
     }
+  }
+
+  private loadVideo(id: number): void {
+    this.videoId = id;
+    this.video = null;
+    this.errorMessage = null;
+    this.commentsError = null;
+    this.likeError = null;
+    this.watchPartyStatus = null;
+    this.stopTranscodingPolling();
+    this.isTranscodingReady = false;
+    this.transcodingProgress = 0;
+    this.transcodingMessage = 'Preparing transcoding...';
+    this.destroyPlayers();
+
+    const player = this.playerRef?.nativeElement;
+    if (player) {
+      player.pause();
+      player.removeAttribute('src');
+      player.load();
+    }
+
+    this.videoService.getVideoById(id).subscribe({
+      next: (data) => {
+        this.video = data;
+        this.likesCount = data.likesCount ?? 0;
+        this.likedByUser = !!data.likedByUser;
+        this.startTranscodingPolling();
+      },
+      error: (error) => {
+        this.errorMessage = `Failed to load video: ${error.message}`;
+        console.error(error);
+      }
+    });
+
+    this.loadComments(0);
   }
 }

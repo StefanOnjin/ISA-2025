@@ -51,6 +51,23 @@
             Like
           </button>
         </div>
+        <div class="like-row" *ngIf="watchPartyRoom">
+          <button
+            type="button"
+            class="action-button like-button"
+            *ngIf="watchPartyRoom.owner"
+            (click)="syncWatchPartyVideo()">
+            Play for room {{ watchPartyRoom.roomCode }}
+          </button>
+          <span class="view-count" *ngIf="!watchPartyRoom.owner">
+            You are in room {{ watchPartyRoom.roomCode }} as member.
+          </span>
+          <span class="view-count">
+            Socket: {{ watchPartyConnected ? 'Connected' : 'Connecting...' }}
+          </span>
+        </div>
+        <p *ngIf="watchPartyStatus" class="hint">{{ watchPartyStatus }}</p>
+        <p *ngIf="watchPartyError" class="error-message">{{ watchPartyError }}</p>
         <p class="author">
           Uploaded by:
           <a [routerLink]="['/users', video.ownerUsername]">{{ video.ownerUsername }}</a>

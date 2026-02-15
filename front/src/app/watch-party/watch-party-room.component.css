@@ -1,0 +1,77 @@
+.watch-party-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px;
+  color: #f4f7ff;
+}
+
+.hint {
+  color: #b8c2d9;
+  margin-bottom: 18px;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.join-group {
+  display: flex;
+  gap: 8px;
+}
+
+input {
+  min-width: 180px;
+  border: 1px solid #3f4b66;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #10182a;
+  color: #f4f7ff;
+}
+
+button {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #1f6feb;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #2f7ffb;
+}
+
+.room-card {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid #3f4b66;
+  border-radius: 10px;
+  background: #0d1424;
+}
+
+.room-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+}
+
+.danger {
+  background: #c83f4a;
+}
+
+.danger:hover {
+  background: #db4f5c;
+}
+
+.status {
+  margin-top: 16px;
+  color: #70d18c;
+}
+
+.error {
+  margin-top: 8px;
+  color: #ff8f8f;
+}

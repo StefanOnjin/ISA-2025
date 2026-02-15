@@ -12,6 +12,7 @@ import { VideoDetailComponent } from './video/video-detail/video-detail.componen
 import { VideoMapComponent } from './video/video-map/video-map.component';
 import { VideoPremieresComponent } from './video/video-premieres/video-premieres.component';
 import { VideoPremierComponent } from './video/video-premier/video-premier.component';
+import { WatchPartyRoomComponent } from './watch-party/watch-party-room.component';
 
 const routes: Routes = [
   { path: '', redirectTo: 'home', pathMatch: 'full' },
@@ -21,6 +22,7 @@ const routes: Routes = [
   { path: 'map', component: VideoMapComponent },
   { path: 'premieres', component: VideoPremieresComponent },
   { path: 'premiers/:id', component: VideoPremierComponent },
+  { path: 'watch-party', component: WatchPartyRoomComponent, canActivate: [AuthGuard] },
   { path: 'upload', component: VideoUploadComponent, canActivate: [AuthGuard] },
   { path: 'videos/:id', component: VideoDetailComponent },
   { path: 'users/:username', component: UserProfileComponent },

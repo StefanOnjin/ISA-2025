@@ -1,0 +1,33 @@
+<section class="watch-party-page">
+  <h1>Watch Party</h1>
+  <p class="hint">Create a room or join with a room code. Owner can sync currently opened video for all members.</p>
+
+  <div class="actions">
+    <button type="button" (click)="createRoom()">Create Room</button>
+    <div class="join-group">
+      <input
+        type="text"
+        maxlength="12"
+        placeholder="Enter room code"
+        [(ngModel)]="joinCode"
+        (keydown.enter)="joinRoom()"
+      />
+      <button type="button" (click)="joinRoom()">Join Room</button>
+    </div>
+  </div>
+
+  <div class="room-card" *ngIf="activeRoom">
+    <p><strong>Room:</strong> {{ activeRoom.roomCode }}</p>
+    <p><strong>Owner:</strong> {{ activeRoom.ownerUsername }}</p>
+    <p><strong>Your role:</strong> {{ activeRoom.owner ? 'Owner' : 'Member' }}</p>
+    <p><strong>Socket:</strong> {{ isConnected ? 'Connected' : 'Connecting...' }}</p>
+    <p><strong>Participants:</strong> {{ activeRoom.participants.join(', ') }}</p>
+    <div class="room-actions">
+      <button type="button" *ngIf="activeRoom.owner" (click)="goToHome()">Open Videos</button>
+      <button type="button" class="danger" (click)="leaveRoom()">Leave Room</button>
+    </div>
+  </div>
+
+  <p *ngIf="statusMessage" class="status">{{ statusMessage }}</p>
+  <p *ngIf="errorMessage" class="error">{{ errorMessage }}</p>
+</section>
