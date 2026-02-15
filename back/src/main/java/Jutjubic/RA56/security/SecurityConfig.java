@@ -2,6 +2,8 @@ package Jutjubic.RA56.security;
 
 import Jutjubic.RA56.security.auth.RestAuthenticationEntryPoint;
 import Jutjubic.RA56.security.auth.TokenAuthenticationFilter;
+import Jutjubic.RA56.security.auth.UserActivityTrackingFilter;
+import Jutjubic.RA56.service.ActiveUserMetricsService;
 import Jutjubic.RA56.util.TokenUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,13 +28,16 @@ public class SecurityConfig {
 	private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
 	private final TokenUtils tokenUtils;
 	private final UserDetailsService userDetailsService;
+	private final ActiveUserMetricsService activeUserMetricsService;
 
 	public SecurityConfig(RestAuthenticationEntryPoint restAuthenticationEntryPoint,
 			TokenUtils tokenUtils,
-			UserDetailsService userDetailsService) {
+			UserDetailsService userDetailsService,
+			ActiveUserMetricsService activeUserMetricsService) {
 		this.restAuthenticationEntryPoint = restAuthenticationEntryPoint;
 		this.tokenUtils = tokenUtils;
 		this.userDetailsService = userDetailsService;
+		this.activeUserMetricsService = activeUserMetricsService;
 	}
 
 	@Bean
@@ -55,6 +60,7 @@ public class SecurityConfig {
 					.requestMatchers(HttpMethod.GET, "/api/users/**").permitAll()
 					.requestMatchers(HttpMethod.HEAD, "/api/users/**").permitAll()
 					.requestMatchers("/auth/**", "/h2-console/**", "/error", "/ws/**").permitAll()
+					.requestMatchers("/actuator/health/**", "/actuator/info", "/actuator/prometheus").permitAll()
 					.anyRequest().authenticated());
 
 		http.formLogin(form -> form.disable());
@@ -62,6 +68,7 @@ public class SecurityConfig {
 
 		http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
 		http.addFilterBefore(new TokenAuthenticationFilter(tokenUtils, userDetailsService), BasicAuthenticationFilter.class);
+		http.addFilterAfter(new UserActivityTrackingFilter(activeUserMetricsService), TokenAuthenticationFilter.class);
 
 		return http.build();
 	}

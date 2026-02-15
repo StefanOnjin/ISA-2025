@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { AuthResponse } from '../models/auth-response';
@@ -11,6 +11,7 @@ import { RegistrationRequest } from '../models/registration-request';
 })
 export class AuthService {
   private readonly baseUrl = 'http://localhost:8080/auth';
+  private readonly monitoringBaseUrl = 'http://localhost:8080/api/monitoring';
   private readonly tokenKey = 'ra56.jwt';
 
   constructor(private http: HttpClient) {}
@@ -23,8 +24,33 @@ export class AuthService {
     return this.http.post<AuthTokenResponse>(`${this.baseUrl}/login`, payload).pipe(
       tap((response) => {
         localStorage.setItem(this.tokenKey, response.accessToken);
+        this.sendHeartbeat(response.accessToken);
       })
     );
+  }
+
+  private sendHeartbeat(token: string): void {
+    const headers = new HttpHeaders({
+      Authorization: `Bearer ${token}`
+    });
+
+    this.http.post(`${this.monitoringBaseUrl}/heartbeat`, {}, { headers }).subscribe({
+      error: () => {
+        // Heartbeat is best-effort and must not affect login flow.
+      }
+    });
+  }
+
+  private sendLogoutSignal(token: string): void {
+    const headers = new HttpHeaders({
+      Authorization: `Bearer ${token}`
+    });
+
+    this.http.post(`${this.monitoringBaseUrl}/logout`, {}, { headers }).subscribe({
+      error: () => {
+        // Logout signal is best-effort and must not block client logout.
+      }
+    });
   }
 
   getToken(): string | null {
@@ -36,6 +62,10 @@ export class AuthService {
   }
 
   logout(): void {
+    const token = this.getToken();
+    if (token) {
+      this.sendLogoutSignal(token);
+    }
     localStorage.removeItem(this.tokenKey);
   }
 }

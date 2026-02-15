@@ -4,3 +4,5 @@ storage/
 back/chunk-*.m4s
 back/init-*.m4s
 back/manifest.mpd
+__pycache__/
+*.pyc
