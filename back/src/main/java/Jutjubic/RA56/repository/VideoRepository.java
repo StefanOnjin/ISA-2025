@@ -7,6 +7,7 @@ import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
@@ -22,6 +23,18 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     Video findOneByIdForUpdate(@Param("id") Long id);
 
     Optional<Video> findByVideoPath(String videoPath);
+
+    @Query("""
+            SELECT v
+            FROM Video v
+            WHERE v.createdAt <= :cutoff
+              AND (v.thumbnailCompressed IS NULL OR v.thumbnailCompressed = false)
+            ORDER BY v.createdAt ASC
+            """)
+    List<Video> findOldUncompressedThumbnails(
+            @Param("cutoff") LocalDateTime cutoff,
+            Pageable pageable
+    );
 
     @Query("""
             SELECT new Jutjubic.RA56.dto.VideoMapPoint(

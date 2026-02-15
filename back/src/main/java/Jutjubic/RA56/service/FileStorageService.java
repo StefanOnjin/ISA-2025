@@ -125,4 +125,12 @@ public class FileStorageService {
         }
         return filePath;
     }
+
+    public Path resolveThumbnailPath(String fileName) {
+        Path filePath = this.thumbnailStorageLocation.resolve(fileName).normalize();
+        if (!filePath.startsWith(this.thumbnailStorageLocation)) {
+            throw new IllegalArgumentException("Invalid thumbnail path");
+        }
+        return filePath;
+    }
 }

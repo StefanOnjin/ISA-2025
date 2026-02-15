@@ -8,8 +8,8 @@ from urllib.request import Request, urlopen
 BASE_URL = "http://localhost:8080"
 ENDPOINT = "/api/videos"
 
-EMAIL = "milankecmanbp@gmail.com"
-PASSWORD = "12345678"
+EMAIL = "strahinjaponjevic03@gmail.com"
+PASSWORD = "sifra123"
 USE_LOGIN = True
 SEND_HEARTBEAT = True
 

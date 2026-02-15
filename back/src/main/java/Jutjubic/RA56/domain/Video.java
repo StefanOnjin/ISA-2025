@@ -41,6 +41,12 @@ public class Video {
     @Column(nullable = true)
     private Boolean premiereEnabled;
 
+    @Column(nullable = true)
+    private Boolean thumbnailCompressed = false;
+
+    @Column(nullable = true)
+    private LocalDateTime thumbnailCompressedAt;
+
     @Column(nullable = false)
     private Double latitude;
 
@@ -64,6 +70,8 @@ public class Video {
         this.scheduledAt = scheduledAt;
         this.durationSeconds = durationSeconds;
         this.premiereEnabled = premiereEnabled;
+        this.thumbnailCompressed = false;
+        this.thumbnailCompressedAt = null;
         this.latitude = latitude;
         this.longitude = longitude;
         this.owner = owner;
@@ -155,6 +163,22 @@ public class Video {
 
     public void setPremiereEnabled(Boolean premiereEnabled) {
         this.premiereEnabled = premiereEnabled;
+    }
+
+    public Boolean getThumbnailCompressed() {
+        return thumbnailCompressed;
+    }
+
+    public void setThumbnailCompressed(Boolean thumbnailCompressed) {
+        this.thumbnailCompressed = thumbnailCompressed;
+    }
+
+    public LocalDateTime getThumbnailCompressedAt() {
+        return thumbnailCompressedAt;
+    }
+
+    public void setThumbnailCompressedAt(LocalDateTime thumbnailCompressedAt) {
+        this.thumbnailCompressedAt = thumbnailCompressedAt;
     }
 
     public Double getLatitude() {
