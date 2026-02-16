@@ -41,7 +41,7 @@ public class PopularityEtlService {
 		this.popularityTop3Repository = popularityTop3Repository;
 	}
 
-	@Scheduled(cron = "${app.popularity-etl.cron:0 10 1 * * ?}")
+	@Scheduled(cron = "${app.popularity-etl.cron:0 0 0 * * ?}")
 	@Transactional
 	public void runDailyEtl() {
 		LocalDate today = LocalDate.now();
