@@ -9,11 +9,13 @@ import Jutjubic.RA56.dto.PremierDetailResponse;
 import Jutjubic.RA56.dto.PremiereVideoResponse;
 import Jutjubic.RA56.dto.TranscodingJobMessage;
 import Jutjubic.RA56.dto.TranscodingStatusResponse;
+import Jutjubic.RA56.dto.UploadEventJsonMessage;
 import Jutjubic.RA56.dto.VideoDetailResponse;
 import Jutjubic.RA56.dto.VideoMapClusterRow;
 import Jutjubic.RA56.dto.VideoMapPoint;
 import Jutjubic.RA56.dto.VideoMapResponse;
 import Jutjubic.RA56.dto.VideoResponse;
+import Jutjubic.RA56.proto.UploadEventProto;
 import Jutjubic.RA56.repository.VideoLikeRepository;
 import Jutjubic.RA56.repository.UserRepository;
 import Jutjubic.RA56.repository.VideoRepository;
@@ -30,7 +32,9 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.nio.file.Files;
@@ -55,6 +59,7 @@ public class VideoService {
     private final AdaptiveStreamingService adaptiveStreamingService;
     private final TranscodingJobService transcodingJobService;
     private final TranscodingJobProducer transcodingJobProducer;
+    private final UploadEventProducer uploadEventProducer;
     private final VideoViewRepository videoViewRepository;
     
     @Value("${app.base-url}") 
@@ -68,6 +73,7 @@ public class VideoService {
             AdaptiveStreamingService adaptiveStreamingService,
             TranscodingJobService transcodingJobService,
             TranscodingJobProducer transcodingJobProducer,
+            UploadEventProducer uploadEventProducer,
             VideoViewRepository videoViewRepository) {
         this.videoRepository = videoRepository;
         this.fileStorageService = fileStorageService;
@@ -77,6 +83,7 @@ public class VideoService {
         this.adaptiveStreamingService = adaptiveStreamingService;
         this.transcodingJobService = transcodingJobService;
         this.transcodingJobProducer = transcodingJobProducer;
+        this.uploadEventProducer = uploadEventProducer;
         this.videoViewRepository = videoViewRepository;
     }
 
@@ -399,6 +406,7 @@ public class VideoService {
             Video savedVideo = videoRepository.save(video);
             TranscodingJob job = transcodingJobService.createPendingJob(savedVideo);
             enqueueTranscodingAfterCommit(job, savedVideo);
+            enqueueUploadEventAfterCommit(savedVideo, videoFile.getSize());
 
             evictVideoMapCacheFor(savedVideo);
             
@@ -587,6 +595,48 @@ public class VideoService {
                 transcodingJobProducer.publish(message);
             }
         });
+    }
+
+    private void enqueueUploadEventAfterCommit(Video video, long sizeBytes) {
+        UploadEventJsonMessage jsonMessage = new UploadEventJsonMessage(
+                video.getId(),
+                video.getTitle(),
+                Math.max(0L, sizeBytes),
+                video.getOwner().getUsername(),
+                toEpochMillis(video.getCreatedAt())
+        );
+
+        UploadEventProto.UploadEvent protoMessage = UploadEventProto.UploadEvent.newBuilder()
+                .setVideoId(video.getId())
+                .setTitle(video.getTitle() == null ? "" : video.getTitle())
+                .setSizeBytes(Math.max(0L, sizeBytes))
+                .setAuthorUsername(video.getOwner().getUsername() == null ? "" : video.getOwner().getUsername())
+                .setCreatedAtEpochMs(toEpochMillis(video.getCreatedAt()))
+                .build();
+
+        Runnable publishTask = () -> {
+            uploadEventProducer.publishJson(jsonMessage);
+            uploadEventProducer.publishProtobuf(protoMessage);
+        };
+
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            publishTask.run();
+            return;
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                publishTask.run();
+            }
+        });
+    }
+
+    private long toEpochMillis(LocalDateTime value) {
+        if (value == null) {
+            return Instant.now().toEpochMilli();
+        }
+        return value.toInstant(ZoneOffset.UTC).toEpochMilli();
     }
 
     private long resolveDurationSeconds(Video video) {

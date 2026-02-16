@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package jutjubic.ra56.events;
+
+option java_package = "Jutjubic.RA56.proto";
+option java_outer_classname = "UploadEventProto";
+
+message UploadEvent {
+  int64 video_id = 1;
+  string title = 2;
+  int64 size_bytes = 3;
+  string author_username = 4;
+  int64 created_at_epoch_ms = 5;
+}
