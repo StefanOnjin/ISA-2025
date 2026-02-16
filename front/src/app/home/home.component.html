@@ -1,1 +1,28 @@
+<section class="popular-section" *ngIf="isLoggedIn">
+  <h2>Top 3 Popular Videos</h2>
+
+  <p class="popular-meta" *ngIf="popularity?.createdAt">
+    Last ETL execution: {{ popularity?.createdAt | date: 'dd.MM.yyyy HH:mm' }}
+  </p>
+
+  <p class="popular-empty" *ngIf="!popularityError && (!popularity || !popularity.videos?.length)">
+    No data available.
+  </p>
+
+  <p class="popular-empty" *ngIf="popularityError">
+    Failed to load popular videos.
+  </p>
+
+  <div class="popular-grid" *ngIf="popularity?.videos?.length">
+    <a class="popular-card" *ngFor="let video of popularity?.videos ?? []; index as i" [routerLink]="['/videos', video.videoId]">
+      <img [src]="video.thumbnailUrl" [alt]="video.title" />
+      <div class="popular-info">
+        <span class="rank">#{{ i + 1 }}</span>
+        <h3>{{ video.title }}</h3>
+        <p>Popularity score: {{ video.score }}</p>
+      </div>
+    </a>
+  </div>
+</section>
+
 <app-video-list></app-video-list>

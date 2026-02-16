@@ -1,16 +1,76 @@
-.home-card {
-  background: rgba(255, 255, 255, 0.92);
-  padding: 48px;
-  border-radius: 20px;
-  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.2);
-  text-align: center;
+.popular-section {
+  margin: 20px 0 28px;
+  padding: 20px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
 }
 
-.home-card h1 {
-  font-size: 32px;
-  margin-bottom: 8px;
+.popular-section h2 {
+  margin: 0;
+  font-size: 22px;
+  color: #0f172a;
 }
 
-.home-card p {
+.popular-meta {
+  margin: 8px 0 16px;
   color: #475569;
+  font-size: 14px;
+}
+
+.popular-empty {
+  margin: 12px 0 0;
+  color: #64748b;
+}
+
+.popular-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.popular-card {
+  display: block;
+  text-decoration: none;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  color: inherit;
+  background: #f8fafc;
+}
+
+.popular-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.12);
+}
+
+.popular-card img {
+  width: 100%;
+  height: 330px;
+  object-fit: cover;
+}
+
+.popular-info {
+  padding: 10px 12px 12px;
+}
+
+.popular-info .rank {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1d4ed8;
+  margin-bottom: 5px;
+}
+
+.popular-info h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.popular-info p {
+  margin: 0;
+  color: #334155;
+  font-size: 14px;
 }

@@ -2,6 +2,7 @@ package Jutjubic.RA56.service;
 
 import Jutjubic.RA56.domain.User;
 import Jutjubic.RA56.domain.Video;
+import Jutjubic.RA56.domain.VideoView;
 import Jutjubic.RA56.domain.TranscodingJob;
 import Jutjubic.RA56.domain.TranscodingJobStatus;
 import Jutjubic.RA56.dto.PremierDetailResponse;
@@ -16,6 +17,7 @@ import Jutjubic.RA56.dto.VideoResponse;
 import Jutjubic.RA56.repository.VideoLikeRepository;
 import Jutjubic.RA56.repository.UserRepository;
 import Jutjubic.RA56.repository.VideoRepository;
+import Jutjubic.RA56.repository.VideoViewRepository;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.io.Resource;
@@ -53,6 +55,7 @@ public class VideoService {
     private final AdaptiveStreamingService adaptiveStreamingService;
     private final TranscodingJobService transcodingJobService;
     private final TranscodingJobProducer transcodingJobProducer;
+    private final VideoViewRepository videoViewRepository;
     
     @Value("${app.base-url}") 
     private String baseUrl; 
@@ -64,7 +67,8 @@ public class VideoService {
             CacheManager cacheManager,
             AdaptiveStreamingService adaptiveStreamingService,
             TranscodingJobService transcodingJobService,
-            TranscodingJobProducer transcodingJobProducer) {
+            TranscodingJobProducer transcodingJobProducer,
+            VideoViewRepository videoViewRepository) {
         this.videoRepository = videoRepository;
         this.fileStorageService = fileStorageService;
         this.userRepository = userRepository;
@@ -73,6 +77,7 @@ public class VideoService {
         this.adaptiveStreamingService = adaptiveStreamingService;
         this.transcodingJobService = transcodingJobService;
         this.transcodingJobProducer = transcodingJobProducer;
+        this.videoViewRepository = videoViewRepository;
     }
 
     public List<VideoResponse> getAllVideos() {
@@ -270,6 +275,7 @@ public class VideoService {
         long currentViews = video.getViews() == null ? 0L : video.getViews();
         video.setViews(currentViews + 1);
         videoRepository.save(video);
+        videoViewRepository.save(new VideoView(video, LocalDateTime.now()));
 
         String thumbnailUrl = this.baseUrl + "/api/videos/thumbnail/" + video.getThumbnailPath();
         
@@ -330,6 +336,7 @@ public class VideoService {
         long currentViews = video.getViews() == null ? 0L : video.getViews();
         video.setViews(currentViews + 1);
         videoRepository.save(video);
+        videoViewRepository.save(new VideoView(video, LocalDateTime.now()));
 
         long streamOffsetSeconds = computeStreamOffsetSeconds(scheduledAt, now);
         String thumbnailUrl = this.baseUrl + "/api/videos/thumbnail/" + video.getThumbnailPath();
